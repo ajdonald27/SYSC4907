@@ -1,0 +1,896 @@
+# DSP Notes - Capstone 
+
+#Lesson 1 - understand the radar module (HB100)
+
+
+Radar Tx:
+- HB100 is constantly transmitting 10.525GHz microwave signal 
+- Wave hits a person ? if person is still, reflected wave has the same frequency
+- 	person moving: reflected wave is shifted slightly in frequency, (this is the Doppler effect) 
+
+FPGA + 10.525GHz signal 
+- Radar module has circuitry for mixing Tx and Rx signals together
+- Instead of 10.525GHz output signal, radar outputs low-frequency doppler signal, called the IF (Intermediate Frequency) 
+- Example Values : 
+	standing still -> ~0 Hz 
+	walking -> 10-200Hz 
+	running -> 200+Hz 
+thus, sample this with an ADC 
+
+IF signal (Radar output) : 
+- looks line a sine wave. -> frequency of sine wave tells us how fast the object is moving 
+- amplitude -> strength of reflection (distance, target size and orientation) 
+
+FPGA perspective of the chain : Person walking -> Radar -> low-frequency sine wave -> ADC -> digital samples -> FPGA 
+
+Summary : 
+HB100 Tx = 10.525GHz 
+Moving objects = doppler frequency shift 
+HB100 outputs a low-freq IF signal (actual output we want) 
+FPGA processes IF after it's converted and digitized by the ADC 
+Walking speed = frequency of IF signal 
+
+
+#Lesson 2 - Sampling 
+- How an ADC converts radar analog output to digital numbers 
+
+Step 1 : Radar outputs a continuous signal
+HB100 produces a smooth analog voltage over time (sine wave), this signal exists continuously
+- FPGA can't do anything with Analog Signal
+
+Step 2 : ADC takes snapshots  
+- ADC is taking photos of waveforms at regular intervals (sampling rate)
+- Doesn't see the full curve, just points. more points -> more accurate representation 
+- Example 1.52V -> ADC -> 1887 (what the FPGA gets) 
+
+Step 3 : Sample rate 
+- tells us how often ADC is measuring, ex : 4000 samples/sec or 4kHz, every 0.25ms it takes a sample 
+
+Step 4: FPGA Rx 
+- If the radar output is a sine wave, FPGA sees: 
+- FPGA gets something like this : 1980, 2142, 2315, 2450, etc.. 
+- FPGA has no clue it's looking at a sine wave, only seems a stream of numbers. 
+- DSP algorithm must recover the hidden frequency inside those numbers 
+
+Step 5: Choose a Sampling Rate 
+- How fast do we sample? If we expect Doppler frequencies of about 300Hz, then : 
+- 500Hz : too low, won't get a good enough picture 
+- 1000Hz : bordeline 
+- 2kHz : Good
+- 4kHz : lots of margin (remember Nyquist from 3501) 
+
+*Important: Sample rate must be >>> max_frequency you want to measure 
+
+*Application to our project*: 
+- ADC Resolution : 12 bits (standard and should be enough) 
+- Sample Rate : 4kHz 
+- Input range : 0-3.3V (standard) 
+
+Summary : 
+- ADC converts analog voltage -> digital numbers 
+- FPGA receives integers not voltages 
+- Sampling means measuring the signal at fixed time intervals 
+- Sample rate = how often measurements are taken 
+
+
+#Lesson 3 - Nyquist Sampling 
+- How fast we need to sample, and what happens if we undersample
+
+Step 1 : Simple sine wave 
+- Radar outputs 100Hz sine wave, meaning 
+- 100 cycles every second. one cycle, T = 1/100 = 10ms 
+Step 2: Sampling - taking snapshots 
+- Sample rate at 4kHz -> gets lots of points of the 100Hz waveform, can easily reconstruct 
+- Sample rate at 200Hz -> only about 2 samples per cycle, still sort of possible to identify input freq 
+- Sample rate at 150Hz -> would be like 1.5pts, samples no longer represent the true waveform. ADC begins seeing a completely different frequency (aliasing) 
+
+Nyquist Rule : Sample at least twice as fast as the highest frequency you want to measure 
+- Fs >= 2Fmax (Nyquist Rate) 
+- In reality : sample much higher than nyquist, so more like 2 or 4kHz 
+
+Why not to sample exactly at Nyquist : real signals have are troublesome 
+- noise 
+- harmonics 
+- interference 
+- imperfect filters 
+
+Sampling faster : 
+- easier filter design 
+- more accurate FFT 
+- less chance of aliasing 
+
+Aliasing: 
+- Result of undersampling 
+- Nothing actually wrong with output signal, ADC just sampled too slow and gives wrong impression of frequency 
+
+*Application to our project* 
+- Max expected Doppler Freq : ~250Hz 
+- Nyquist says -> Fs >= 2(250) (minimum 500Hz) 
+- Instead, choose 4kHz because : 
+- ADCs easily support it
+- FPGA easily processes it
+- Gives us good margin 
+
+Summary : 
+- Nyquist rate = 2 x Fmax 
+- Sampling slower than Nyquist ? -> Aliasing 
+- Aliasing creates false frequencies, which can't be corrected 
+
+
+#Lesson 4 - Time Domain vs Frequency Domain 
+- Step 1: Time Domain 
+Voltage as a function of time, this is what comes out of the ADC (after being sampled) 
+Ex : 1980, 2145, 2310, 2450. These are voltages converted into integers, they represent the waveform over time 
+
+- Step 2 : Listening to a Piano
+- In the time domain -> we see a waveform (but in reality, what note is being played?) 
+- Looking at the waveform directly isn't easy, instead we really want to know 'what frequencies are present?' 
+
+- Step 3: Frequency Domain 
+- Instead of asking "what is the voltage right now?" -> "how much of each frequency exists in this signal" -> P(f) or PSD 
+
+- Step 4: Why? 
+
+Person 		Doppler Frequency 
+Standing	0Hz  
+Slow Walk 	50Hz
+Normal Walk 	100Hz 
+Fast Walk	180Hz 
+
+From this, we don't actually care about what the waveform looks like, we care about the strongest frequency. 
+Hence, we'll eventually use a Fast Fourier Transform (FFT) 
+
+Step 5: Two views of the signal 
+- Time Domain: How the signal changes over time. Useful for, viewing raw samples, seeing noise, clipping or glitches.
+
+- Frequency Domain: What frequencies make up the signal, Useful for speed estimation, filtering, target detection and checking interference. 
+
+FPGA sees (from ADC): 1980, 2145, 2310, 2450. Which then transforms it into : 
+Frequency (Hz)    Magnitude
+0                 2
+20                4
+40                8
+60                18
+80                45
+100               220  ← largest peak
+120               40
+140               10
+
+So, the radar doens't tell us that the target is moving at 100Hz, the FPGA discovers it by analyzing the samples from the ADC. 
+
+Heart & Core of the DSP. 
+- Entire FPGA pipeline exists to answer : What frequencies are contained in these ADC samples? Everything else, supports that task : 
+ADC Samples -> Filtering -> Windowing -> FFT -> Magnitude -> Peak Detection -> Dominant Frequency -> Estimated Speed
+
+Summary : 
+- Time domain: Shows amplitude over time 
+- Frequency Domain: Shows amplitude (power) versus frequency 
+- ADC Provides time domain samples 
+- FPGA converts samples into frequency information 
+- Doppler radar: Dominant frequency corresponds to target speed. 
+
+Lesson 5: FFTs 
+- What the FFT is doing and why it's the core of the FPGA DSP pipeline. 
+Step 1: The Problem 
+- ADC just collected 1024 samples (of time domain data) -> FPGA sees : 2048, 2135, 2218, 2294, etc. 
+- With these numbers, we can't really conclude anything. The frequency is hidden inside the data. 
+
+Step 2: what does the FFT do? 
+- FFT is like a machine that asks the signal : How much of easch possible frequency is present. Does this for hundreds or thousands of frequencies simultaneously. 
+
+Step 3: Output 
+- Input : 2048, 2135, 2218, 2294 
+- Output : 
+Frequency (Hz)     Magnitude
+0                  5
+10                 3
+20                 4
+30                 8
+40                 15
+50                 22
+60                 60
+70                 210  <-- strongest
+80                 55
+90                 18
+100                10
+
+Thus, the dominant frequency is ~70Hz. 
+
+Step 4: Why "Fast" Fourier Transform
+- Originally, we have the Discrete Fourier Transform (DFT): It works but it's super slow. 
+Ex: 1024 samples in a DFT, it performs ~1million operations. 
+- FFT is an algorithm which yields the exact same answer, but with minimal operations. Instead of N^2, ~Nlog2(N). Ex: 1024 samples, DFT : 1024^2 = 1048576, FFT : 1024(log2(1024) = 10240 operations (~100x less)
+
+- Step 5: How does it fit into the radar
+- ADC samples at 4kHz (4000samples/sec) 
+- Collected : 1024 samples
+- 1024 / 4000 -> 0.256s 
+
+- In reality this means, every 0.256s : ADC samples -> FFT -> Frequency Spectrum -> Peak Detector -> Estimated Speed. (FPGA repeats this continuously) 
+
+- Where is the FFT in the pipeline (according to the Architecture) : SPI Rx -> Sample Buffer -> Digital Filter -> Windowing -> FFT -> Magnitude -> Peak Detection -> ARM processor
+- FFT != whole DSP algorithm, just one stage. 
+
+Summary : 
+- FFT converts time-domain samples into frequency-domain information 
+- FFT is an efficient implementation of the DFT. 
+- Output is the spectrum showing the magnitude of different frequencies 
+- Largest peak = target's Doppler Frequency 
+- FFT is one stage in the pipeline, not full solution.
+
+Lesson 6: FFT resolution & size 
+- What FFT size means, why bigger isn't always better and how FFT size affects our speed estimation 
+
+- Step 1 : What is an FFT size? 
+- ADC sampling at 4000samples/sec : Instead of running an FFT on each sample, we can a block of samples. Ex: ADC -> Sample 1,2,3,4 etc. -> Run FFT. 
+- FFT size is just : how many samples we analyze at once. Ex: 256, 512, 1024 and 2048 samples.
+
+- Step 2 : More samples = more time to collect 
+- 4000 samples/sec : 
+| FFT Size | Time to Collect Samples |
+| -------: | ----------------------: |
+|      256 |                   64 ms |
+|      512 |                  128 ms |
+|     1024 |                  256 ms |
+|     2048 |                  512 ms |
+- THUS : Larger FFT = longer wait before computation. 
+
+- Step 3 : Frequency Resolution 
+
+- FFT doesn't measure every possible frequency. Instead, we divide the spectrum into bins. Spacing between bins = Frequency Resolution. 
+- Equation for Frequency Resolution : delta(F) = Fs/N, Fs = sampling frequency, N = FFT size 
+- Ex: Sample Rate = 4000Hz, N = 1024. deltaF = 4000/1024 = 3.9Hz, so the FFT can distinguish frequencies approx every 3.9Hz.
+- So, bigger FFT -> better frequency resolution. 
+
+*Tradeoffs* : 
+- 2048 FFT = great resolution. But, we have to wait over 0.5s to get an answer. 
+- 256 FFT = fast response, poor frequency estimate. 
+
+- 72Hz = HB100 Doppler frequency shift = 1/ms. (Constant for the module) 
+- Ex: 256-points FFT, Fr = 15.6Hz, 15.6Hz / 72Hz(m/s) = 0.22m/s sensitivity
+- Versus : 1024 FFT, Fr = 3.9Hz / 72Hz(m/s) = 0.05m/s. 
+
+Conclusion: 1024 samples @ 4kHz is a good starting point. 
+
+Summary : 
+- FFT size = number of samples processed together. 
+- Larger FFT = improved frequency resolution but longer wait time (latency) 
+- FR = deltaF = Fs/N
+
+See MiniProject : A piece of the golden reference model. 
+- Generate a 72Hz sine wave (simulates a person walking at 1m/s) 
+- Samples at 4kHz
+- Computes FFTs of different sizes : 256, 512, 1024 and 2048. 
+- Plots frequency spectrum
+- Compares compuitation time (optional)
+- Peak accuracy 
+- Frequency Resolution. 
+
+
+
+Lesson 7: Spectral Leakage & Windowing 
+
+Step 1: Thought experiment 
+- suppose you collect 1024 samples of a 72Hz sine wave. Run the FFT and we expect effectively a 'spike' at 72Hz.. In reality -> not really what happens. 
+
+Step 2 : What actually happens - you get something more nuanced and the energhy spreads into neighboring bins. (This is called Spectral Leakage) 
+Amplitude
+
+ ^
+ |
+ |                 ▂█▆█▂
+ |              ▂██   ██▂
+ |____________██_______██____________
+
+Step 3 : Why does Spectral Leakage occur? 
+- Remember, the FFT is only analyzes N samples. It assumes the same N samples repeat forever. It's like taking a picture of only a piece of a sine wave. 
+- We're essentially taking repeated pictures of the exact same section forever.
+
+Step 4 : Special Cases 
+- Suppose your FFT contains exactly an integer number of sine wave cycles -> 8 complete cycles, everything lines up perfectly, no discountinuity and a perfect FFT. 
+- If you have 8.37 cycles, a portion of the signal gets chopped off, repeated version has a discountinuity & leakage appears in the output spectrum. 
+
+Step 5 : The Solution 
+- Instead of abruptly cutting off the signal, we gently fade it to zero. We multiply the signal by something shaped like this : 
+      /\
+     /  \
+    /    \
+___/      \___
+- This now ends naturally by approaching zero. By repeating this -> no large jumps, less leakage. This is called windowing 
+
+Step 6 : Common Windowing Techniques 
+- Some examples : Rectangular (no window), Haan, Hamming & Blackman (probably use Hamming for our project) 
+
+Q: Where does windowing go within the processing chain? 
+A: ADC Samples -> Filter -> Window -> FFT -> Magnitude -> Peak Detection 
+
+Summary: 
+- FFTs analyze a finite block of samples 
+- If the signal doesn't end cleanly, dicontinuties occur (spectral leakage) 
+- Discontinuities create spectral leakage 
+- Windowing is applied before the FFT  
+- A window reduces dicontinuities by tapering the singal at the ends. 
+
+Mini Project #2 : Reuse code from Mini Project #1 and modify it to compare: No window (rectangular) and Hamming window 
+
+Lesson 8 : FIR Digital Filters 
+
+Step 1 : Why do we need filtering? 
+- So far we assumed that the HB100 outputs a perfect 72Hz sine wave. 
+- Reality, a real radar could be pointed at someone walking in the room. So instead, the ADC might see : 
+- Doppler (72Hz) + 60Hz electrical interference + Random amplifier noise + DC offset + High-Frequency noise.
+- If you plotted this : 
+Perfect signal:
+      /\/\/\/\/\/\/\/\/\/\
+Real signal:
+
+_/\/\_/\/\__/\/\/\/\_/\/\___/\_/\/\/\_
+
+The FFT has no clue what parts of the signal are 'real' vs unwanted. 
+
+Step 2 : Analog vs Digital Filtering (our system has both)
+- Analog Filter (before ADC) :
+Radar -> Amplifier -> Analog Filter -> ADC 
+- Purpose of Analog filter is to : prevent aliasing, remove frequencies that ADC shouldn't sample & protect the ADC. 
+
+- Digital Filter : ADC samples -> Digital Filter -> FFT 
+- Filter operates on numbers instead of voltages, instead of resistors & capacitors it uses numbers : delays, multipliers & additions. 
+
+Step 3 : What does the filter actually do? 
+- Signal Filter : Useful Freqs + Unwanted Freqs -> Filter -> Useful Freqs 
+
+Step 4 : Types of Filters 
+- Lowpass: Keeps low, removes high freqs. 
+- Highpass : Keeps high, removes low freqs.
+- Bandpass : Keeps only a range 
+- Bandstop (notch) : Removes only one frequency range. Ex: Removes 60Hz inteference 
+
+For our application : Most likely use LPF, since typical doppler freqs [0,350]Hz, LPF cutoff = 400Hz. This removes higher-frequency amplifier noise. 
+
+Step 5 : FIR vs IIR
+- Two major types of digital filters 
+
+FIR : Finite Impulse Response 
+- Always stable 
+- Linear phase is achievable 
+- Simple to implement 
+- More multiplications for a given frequency response
+
+IIR: Infinite Impulse Response 
+- Often more computationally efficient
+- Uses feedback
+- Can become unstable 
+- More difficult to verify and implement correctly on FPGA logic
+
+Thus, we'll use FIR filters. 
+
+Step 6 : Idea behind an FIR filter 
+- If the ADC produces samples like this : 
+x[0]
+x[1]
+x[2]
+x[3]
+...
+An FIR filter doesn't look only at the newest sample, it looks a the last few. Ex: 
+Newest
+↓
+x[n]
+x[n−1]
+x[n−2]
+x[n−3]
+then, we compute a weighted sum. 
+
+For example: Output =0.4·x[n] + 0.3·x[n−1] + 0.2·x[n−2] + 0.1·x[n−3].
+
+Not every sample is weighted the same (older -> less weight) 
+
+Step 7 : A generic equation for an FIR 
+y[n]=k=0∑M−1​h[k]⋅x[n−k]
+Let's break it down.
+
+x[n]: the current input sample.
+x[n−k]: previous input samples.
+h[k]: filter coefficients (also called taps).
+y[n]: the filtered output.
+
+Effectively: 
+
+Multiply each recent sample by a coefficient, then add all the results together.
+
+Step 8 : How it translates to hardware  
+- Math translates super well to hardware : 
+Input
+  │
+  ▼
+ ┌─────┐
+ │x[n] │──────────────┐
+ └─────┘              │× h0
+      │               ▼
+      ▼            (Multiplier)
+ ┌─────┐
+ │Delay│──────────────┐
+ └─────┘              │× h1
+      │               ▼
+      ▼            (Multiplier)
+ ┌─────┐
+ │Delay│──────────────┐
+ └─────┘              │× h2
+      │               ▼
+      ▼            (Multiplier)
+ ┌─────┐
+ │Delay│──────────────┐
+ └─────┘              │× h3
+                      ▼
+                 Add all products
+                      ▼
+                 Filtered output
+		 
+The FPGA Implementation is just : 
+- shift registers 
+- multipliers 
+- adders 
+
+Why FPGAs love FIR Filters: 
+- Zynq Zybo20 has dedicated DSP Slices for highspeed multiply and add operations. 
+- A simple FIR maps into : Shift registers (implemented with flip-flops or block RAM), DSP slices (multipliers), an Adder tree and an output register 
+
+Summary :
+- Digital Filters operate on sampled data after the ADC 
+- FIR Filters use a weighted sum of recent samples 
+- FIlter coefficients = taps 
+- FIR filters require delays, multipliers & adders 
+- FIR filters are stable & well suited for FPGAs 
+
+
+Lesson 9 - Signal to Noise Ration (SNR) 
+
+- Step 1 : what is noise? 
+- Up until now, it's always been a 72Hz sine wave. Real HW doesn't ever produce a perfect sine wave. 
+
+- ADC will instead receive something like this : desired doppler signal + electrical noise + thermal noise + amplifier noise + quantization noise + random interference 
+
+Step 2 : where does noise come from? 
+- HW chain : HB100 radar -> Amplifier -> Analog Filter -> ADC -> FPGA (each stage has some noise it introduces) 
+- Radar Module : HB100 has internal electronic noise. 
+- Amplifier : Increases both doppler signal and unfortunately noise. Ex: input = 1mV signal + 0.2mV noise, with Gain = 1000. Output = 1V signal + 0.2V noise 
+- ADC : Introduces noise from quantization, conversion and clock jitter
+
+Step 4: White Noise 
+- Most common : AWGN - White Gaussian noise (Additive White Gaussian Noise) 
+- Additive : Simply adds to the signal : Output = Signal + noise
+- White : Contains energy across many frequencies 
+- Gaussian : Sample ampltitudes follow a normal distribution. Most values close to 0, large values are less common. 
+
+Step 5: SNR 
+- Ex: Desired signal = 1V, Noise = 0.1V (easy to detect). 
+- Imagine : Desired signal = 0.2V, Noise = 0.18V (SNR is terrible) 
+- Basically, were comparing signal power to noise power. 
+
+Step 6 : SNR in dB 
+- SNR(dB) = 10log10(PSignal/PNoise) 
+
+Step 7 : Interpreting SNR 
+- SNR vs Result
+30dB : Very clean signal (well filtered)
+20dB : easy to detect 
+10dB : detectable but noisy 
+0dB : signal and noise are equally powerful 
+-10dB : noise is stronger than signal itself 
+
+Step 8 : Why filters help 
+- Suppose doppler is from 0-250Hz. But noise extends from 0-2000Hz. A LPF gets rid of a lot of high-frequency noise. 
+- Signal remains unchanged, noise gets removed -> immediately improved SNR
+
+FPGA Connection: 
+- ADC -> FIR Filter (Improves SNR) -> Window -> FFT -> Peak detector 
+
+Context for Capstone : Someone walks in front of Radar : FPGA must report. Walking detected, estimated speed = 1.1m/s, confidence = high. 
+If the SNR is poor, the FFT may get confused. 
+
+Summary: 
+- Every electronic component/system introduces noise 
+- Noise can't be eliminated entirely 
+- SNR compares Signal Power to Noise Power 
+- FIR Filtering often improves SNR by reducing (attenuating) unwanted frequencies. 
+- Good SNR -> more reliable FFT. 
+
+Mini Project 4 - Introducing Noise & Checking SNR 
+ 
+Lesson 10 - Peak detection 
+
+- Real quick, where we are in the chain. HB100 -> Amplifier -> ADC -> FIR Filter -> Window -> FFT -> Peak Detection (now) -> Velocity Estimation -> Object tracking 
+
+- Step 1 : What does the FFT actually give us ? 
+- Recall : FFT doesn't tell us : something is moving at Xm/s. It gives something like : 
+| Frequency (Hz) | Magnitude |
+| -------------: | --------: |
+|              0 |       0.5 |
+|              4 |       0.7 |
+|              8 |       0.4 |
+|             12 |       0.6 |
+|            ... |       ... |
+|             68 |       8.4 |
+|             72 |      25.6 |
+|             76 |       9.1 |
+|             80 |       1.3 |
+
+- Step 2 : What is a peak 
+- Supposed the FFT looks like : 
+Magnitude
+
+            █
+           ███
+__________█████__________
+
+The center bin is larger than the surrounding bins, that's the LOCAL MAXIMUM, mathematically, a bin is a peak if current bin > left neighbor & current bin > right neighbor 
+
+- Step 3: First Peak Detection Algorithm 
+- An FFT array : [2,5,11,18,27,41,70,53,20,9,4] (largest = 70 @ index 6)
+- Then if your FFT resolution is 3.90625 Hz/bin, then 6 x 3.90625 = 23.4Hz, meaning that's the detected doppler frequency. 
+
+Step 4 : Why "largest bin wins" isn't always correct 
+- Suppose the FFT becomes : 
+Magnitude
+
+          █
+      █   █
+      █   █
+______█___█_________
+How we do know what the target is ? Left peak = electrical interference, right peak = moving person. 
+
+Step 5 : Threshold Detection
+- Suppose the FFT contains random noise : 0.3, 0.6, 0.2, 0.8, 0.5, 0.4, etc. If we simply choose the max, we'll always be detecting something. 
+
+- Instead, we introduce a minimum threshold, ex: Threshold = 5, now only peaks with magnitude >= 5 count as a target. 
+
+Step 6 : Peak Detection Algorithm
+- Simplest useful detector is : 
+For every FFT bin
+↓
+Is it larger than the threshold?
+↓
+Is it larger than the previous bin?
+↓
+Is it larger than the next bin?
+↓
+If YES
+Store the peak
+
+Step 7: Multiple Targets
+- Imagine two people are walking. 
+FFT: Magnitude
+
+      █
+     ███
+
+               █
+              ███
+_____________████_______
+
+Now we have two peaks, so radar system must scan the entire FFT. 
+
+Step 8 : Choosing the best target 
+- Suppose we detect : 
+| Frequency | Magnitude |
+| --------- | --------- |
+| 40 Hz     | 15        |
+| 72 Hz     | 31        |
+| 96 Hz     | 22        |
+
+Possible strategies: Largest Magnitude, Closest Object, Highest SNR, Expected walking speed, nearest previous target. Different radar systems chose differently.
+
+For our capstone : Largest magntiude should be perfectly reasonable (at least to start) 
+
+Step 9 : FPGA implementation 
+- Magnitude RAM -> Read Bin i-1 -> Read Bin i -> Read bin i+1 -> Comparator #1 -> Comparator #2 -> Threshold Comparator -> Peak Found 
+Thus, everything is just : comparators, counters & registers. No floating point math required. FPGAs are good at this. 
+
+So the FPGA pipeline as it stands : Radar -> ADC -> FIR -> Window -> FFT IP -> Magnitude -> Peak Detector -> Velocity Calculator -> UART -> PC Display 
+
+Summary: 
+- FFT outputs a spectrum, not a target 
+- Peak detection converts spectra into detections 
+- A peak is a local maximum 
+- Thresholds help prevent false detections 
+- Multiple peaks may represent multiple objects 
+- FPGA peak detectors mostly use comparators & simple control logic. 
+
+Mini Project #5 : Automatic Target Detector 
+
+Lesson 11: Converting Doppler Freq to Velocity 
+
+- Now that we can detect a Doppler peak @ 72Hz or something, the radar pipeline becomes : 
+Radar signal -> FIR Filter -> Window -> FFT -> Peak detector -> Doppler Freq -> Velocity Calculation 
+
+Step 1: Why motion creates a Doppler Freq
+- Doppler radar transmits an EM wave towards a target, target moves -> reflected wave returns at a slightly different frequency. 
+- The radar module mixes the transmitted & reflected signals -> produces a MUCH lower output frequency called the Doppler frequency. 
+Fd = 2v/λ
+Fd	​is Doppler frequency in hertz
+v is radial velocity in metres per second
+λ is the radar wavelength in metres
+
+thus, v = Fdλ/2
+
+Step 2: Why is there a factor of two? 
+- The Tx wave travels: from radar -> target, then target -> radar. The target's motion affects both parts of that path, so the Doppler shift is doubled. 
+
+3. Finding the wavelength: 
+- Wavelength is related to carrier frequency by : λ = c/Fc (where c = 299,792,458m/s & Fc = radar carrier frequency in Hz). For HB100 Fc = 10.525GHz 
+- Thus, the wavelength is λ = 299,792,458/10.525*10^9 = 0.02848m or 2.48cm 
+
+4. Converting to the 72Hz target 
+- Using v = Fdλ/2. Knowing Fd & λ we can solve for v 
+- v = 72(0.02848m)/2 = 1.03m/s = 3.69km/h 
+
+5. Radial velocity : 
+- Radar does not measure the target's full velocity vector. Instead it measures the component directed toward or away from the radar. 
+- Suppose a person moves at speed v or at an angle theta, relative to the radar line of sight. 
+
+- Vr = vcos(theta), where Vr = radial velocity 
+
+Ex: Moving directly towards radar : maximum doppler shift 
+- Moving directly away : maximum doppler magnitude in the opposite direction 
+- Moving perpendicular to the radar : approx zero doppler shift. 
+
+6. What current radar can vs cannot determine 
+- Speed magnitude (can) 
+- Approaching vs receding (moving towards vs away : cannot) 
+
+- Because: Both may produce a peak at the same positive FFT frequency after taking the magnitude. 
+- Instead to determine the direciton, we need quadrature outputs (I channel, Q channel) 
+- Complex FFT: preserves position and negative Doppler frequencies : Positive Freq -> one direction, Negative Freq -> Opposite direction 
+
+7. Frequency Resolution = Velocity Resolution : 
+- FFT resolution : deltaF = Fs/N, thus deltaV = λ/2*deltaF
+- deltaV = λFs/2N
+Thus, 
+
+Summary: 
+Monostatic Doppler radar uses Fd = 2v/λ
+Velocity is : v = Fdλ/2
+Radar measures radial velocity, not total target velocity.
+Perpendicular motion generates little or no Doppler shift.
+FFT frequency resolution determines velocity resolution.
+Longer observation time improves resolution but increases latency.
+A magnitude-only FFT cannot normally determine direction.
+FPGA velocity calculation can be reduced to multiplication by a constant.
+
+Lesson 12: FFT resolution & Sub-bin Peak Estimation 
+- Ideally, the program detects 72Hz. But does that mean the Doppler is at exactly 72.0000Hz ? Not really, more likely something like 72.36Hz 
+- Meaning, the FFT simply reports the nearest frequency bin. 
+
+Step 1 : FFT Resolution 
+Recall: deltaF = Fs/N, where Fs = sample_rate, N = FFT size (# of samples), Ex: N = 4000, sample_rate = 4000Hz -> deltaF = 4000/4000 = 1 
+Meaning, our frequency bins would be : 0,1,2,3,4,5... Hz. No frequency bin for 72.36Hz.
+
+Step 2: The real signal 
+- Suppose the actual Doppler frequency is : 72.36Hz, the FFT doesn't know where to put it. Instead: 
+- 71Hz -> small peak, 72Hz -> largest -> 73Hz -> almost as large. So, really the energy is spread across nearby bins. 
+
+Step 3: Why the peak looks rounded? 
+- A perfect FFT on an infinitely long sine wave produces a spike in the frequency domain. In reality, we only observe 1 second of the data. 
+- Also, windowing can affect the shape too. 
+
+Step 4: Looking at Three FFT Bins 
+- Suppose the detector reports : 
+| Bin | Magnitude |
+| --: | --------: |
+|  71 |        85 |
+|  72 |       120 |
+|  73 |       110 |
+
+- The largest bin is 72, but the right neighbor (73) is almost as large. That suggests the true peak lies somewhere to the right of 72. 
+
+Step 5: Another Example 
+- Suppose the detector reports : 
+| Bin | Magnitude |
+| --: | --------: |
+|  71 |        85 |
+|  72 |       120 |
+|  73 |       110 |
+
+- Here, 72 is still largest, but instead 71 has a similar magnitude. This implies the truest frequency is slightly below 72Hz. 
+
+Step 6: Sub-bin estimation 
+- Instead of saying, 72Hz. We can estimate 72.18Hz or 71.83 (this is Sub-bin interpolation). It estimates the peak position between FFT bins. 
+
+Step 7: The simplest idea 
+- Left 80, Center 100, Right 90. Centre is still largest, but right neighbor is stronger than left. Meaning, actual peak is probably to the right. '
+
+Step 8: Quadratic Interpolation 
+- A very common technique used in radar is to fit a parabola through the three largest points. 
+- The vertex of the parabola estimates the true frequency. This often improves accuracy by an order of magnitude.
+
+Step 9 : Why it matters 
+- FFT Resultion (deltaF) = 1Hz 
+- Without interpolation, the velocity resolution is limited by that 1 Hz spacing. However, with interpolation we might estimate 72.37Hz instead of 72Hz. 
+
+Step 10: Tradeoffs
+- How to improve frequency accuracy? 
+
+Option 1 - Increase FFT size 
+- Better resolution 
+- CONS: More memory, more computation & higher latency 
+
+Option 2 - Keep the FFT size but use interpolation 
+- Pros : Very little extra computation, significant accuracy improvement 
+- Cons : Slight increase in algorithm complexity 
+Reality : We'll probably use both. 
+
+Step 11 : FPGA 
+- FFT -> Largest Bin -> 72Hz (barebones) 
+- EVENTUALLY: FFT -> Largest Bin -> Read Left Bin -> Read Right Bin -> Interpolation -> 72.37Hz 
+- Notice that we still only examine three numbers, makes it computationally inexpensive.
+
+Step 12: Relation to Capstone 
+- ADC -> FIR -> Windowing -> FFT -> Magnitude -> Peak Detection -> Sub-bin Interpolation -> Velocity Estimation -> UART -> PC GUI 
+
+Summary :
+- FFT frequencies are quantized into discrete bins 
+- True signal frequency typically lies between bins 
+- Signal energy spreads into neighboring bins. 
+- Neighboring-bin magnitudes indicatewhere the true peak lies 
+- Sub-bin interpolation estimates the true frequency 
+ 
+ 
+ 
+Lesson 13 - Detecting Multiple Radar Targets 
+- So far the current detector does : FFT -> Find Strongest Peak -> Report one velocity 
+- Let's try to do multiple targets at once 
+
+
+
+Step 1 : What the current detector does 
+- detect_peak() searches for a local maximum above a threshold (current > previous) and (current > next_value) and current > threshold 
+- However, whenever it finds a valid peak, it only keeps it when (current > best_peak_magnitude) 
+- Menaing, all weaker valid peaks are disgarded. Suppose the FFT contains : 
+| Frequency | Magnitude |
+| --------: | --------: |
+|     45 Hz |       600 |
+|     92 Hz |       950 |
+|    145 Hz |       420 |
+
+- the detector, only return 92Hz. Ideally the new detector should return 45, 92 and 145Hz 
+
+Step 2 : Simulating Multiple Targets 
+- Until now, the signal generator created 1 signal (sine wave) : x(t) = Asin(2pift) 
+
+- For multiple targets we need to add multiple sinusoidals : x(t) = A1sin(2pift) + A2sin(2pift2) + A3sin(2pift), where each sinusoid represents a different target to Doppler frequency. 
+
+
+Step 3 : Target Amplitude Matters 
+- The sinusoid ampltitude represents the strength of the received target signal 
+- A stronger target may be : closer to the radar, larger, more reflective, better aligned with the antenna or simply moving with a stronger radial component. 
+
+
+Step 4 : Return a list instead of one result 
+- current detector returns : peak_frequency, peak_magnitude, peak_index & detected 
+- A multi-target detector should return a collection of detected peaks 
+- a convenient structure is a list of dictionaries : 
+detected_peaks = [
+    {
+        "frequency": 45.0,
+        "magnitude": 600.0,
+        "index": 45
+    },
+    {
+        "frequency": 93.0,
+        "magnitude": 950.0,
+        "index": 93
+    }
+]
+Then,  proces each target using : 
+for peak in detected_peaks:
+    print(peak["frequency"])
+    
+Step 5 : Basic Multi-peak detection 
+- New algorithm still examines three adjacent FFT bins. (previous, current, next) 
+
+- So for each bin :
+- Check whether it is a local max 
+- Check if it exceeds the threshold 
+- Save it to the results list 
+
+In code : 
+detected_peaks = []
+
+for each valid FFT bin:
+
+    if bin is a local maximum:
+        if bin exceeds threshold:
+            save peak
+	    
+	    
+	    
+Step 6 : Noise-peak problem 
+- With noise present, we might see many local maximums 
+- Even if the threshold removes most noise, some noise peaks may still cross it. So, a detector might report : 
+44 Hz
+45 Hz
+47 Hz
+92 Hz
+94 Hz
+145 Hz
+181 Hz
+- But many of these may belong to the same broadened target peak or may just be noise 
+
+Step 7: Minimum Peak Separation 
+- One improvement is to require detected peaks to be separated by a minimum frequency distance. 
+Ex: min_peak_seperation_hz = 5, FFT reports 92, 94Hz. Usually this is treated as belonging to the same target. We'll keep the one strongest in magnitude.
+
+
+Step 8 : Why adjacent bins probably belong to one target 
+- A target frequency doesnt always produce energy in a single FFT bin. 
+
+Step 9: Refining every detected target : 
+- Using quadratic interpolation (mini project 7), we can now apply that to every detected peak. 
+- For each target : Detected FFT Index -> Read left, center and right bins -> Quadratic Interpolation -> Refined Frequency -> Velocity 
+
+So then, the output becomes : 
+Target 1
+Refined frequency: 45.28 Hz
+Velocity: 0.645 m/s
+
+Target 2
+Refined frequency: 92.57 Hz
+Velocity: 1.319 m/s
+
+Target 3
+Refined frequency: 145.16 Hz
+Velocity: 2.068 m/s
+
+Step 10 - Sorting the results 
+- Probably want to sort detected targets in one of two ways. 
+
+1. By frequency : slowest radial velocity -> fastest radial velocity 
+
+2. By magnitude : Strongest target -> weakest target 
+
+Step 11 : Limiting the number of targets 
+- maximum_targets = 4
+
+After sorting by magnitude, you could retain :
+
+detected_peaks = detected_peaks[:maximum_targets]
+
+This is especially relevant for FPGA hardware because:
+
+Output bandwidth is limited.
+Memory is limited.
+Downstream tracking may support only a fixed number of targets.
+Hardware often uses a fixed-size result table.
+
+Step 12 : Converting targets to velocity 
+- For every refined doppler frequency : v = Fdλ/2 (so at 10.525GHz) 
+| Doppler frequency | Radial velocity |
+| ----------------: | --------------: |
+|             45 Hz |       0.641 m/s |
+|             92 Hz |       1.310 m/s |
+|            145 Hz |       2.065 m/s |
+
+
+- Recall : these are radial velocities : two people moving at the same true speed but at different angles may produce different measured Doppler frequencies 
+
+Step 13: Limitations of a continuous-wave (CW) radar: 
+- A basic CW Doppler radar can seperate targets by velocity but not necessarily by distance. 
+To separate targets with the same velocity but at different ranges, you generally need range-capable radar methods such as:
+
+FMCW radar
+Pulsed radar
+Multiple antennas and angle estimation
+Camera-assisted separation
+
+Step 14: FPGA architecture (Final ? ) 
+- FFT Magnitude Spectrum -> Three-bin local maxima detector -> Threshold checker -> Peak Candidate -> Minimum-distance suppresion -> Peak Table -> Sub-bin interpolation -> Velocity Conversion -> ARM Processor 
+
+Summary : 
+- Multiple Moving targets = multiple Dopplers 
+- Multi-target detector saves all valid local maxima rather than only the strongest 
+- Each detected peak should retain its FFT index, frequency & magnitude 
+- Minimum peak speerate can reduce diplicate or closely clustered detections 
+- Quadratic interpolation can be applied independently to each target 
+- Results can be sorted by frequency or magnitude 
+- Basic CW radar seperates targets by radial velocity not by distance (range) 
+- Targets with the same Doppler frequency might merge into one detection.
+
