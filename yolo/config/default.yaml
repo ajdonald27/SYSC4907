@@ -25,7 +25,7 @@ model:
   imgsz: 640
   conf: 0.25
   device: auto          # auto = CUDA 0 if available, else cpu
-  half: false
+  half: false           # true = FP16 inference for .pt weights
   classes: null         # e.g. [0] to keep only class 0
 
 overlay:

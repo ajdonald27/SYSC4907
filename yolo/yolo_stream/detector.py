@@ -76,14 +76,15 @@ class Detector:
         self.model = model
 
     def infer(self, image: np.ndarray) -> List[Detection]:
+        kwargs = {"quantize": 16} if self.cfg.half else {}  # FP16; replaces Ultralytics' old half=True
         results = self.model.predict(
             image,
             imgsz=self.cfg.imgsz,
             conf=self.cfg.conf,
             device=self.device,
-            half=self.cfg.half,
             classes=self.cfg.classes,
             verbose=False,
+            **kwargs,
         )
         return to_detections(results[0])
 

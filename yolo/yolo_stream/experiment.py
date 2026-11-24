@@ -7,8 +7,10 @@ import csv
 import json
 import logging
 import platform
+import queue
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from importlib import metadata
 from pathlib import Path
@@ -33,11 +35,12 @@ def _run(cmd: list, cwd: Optional[Path] = None) -> Optional[str]:
 
 def git_info(repo_dir: Path) -> Dict[str, Any]:
     commit = _run(["git", "rev-parse", "HEAD"], repo_dir)
-    status = _run(["git", "status", "--porcelain"], repo_dir)
+    # Tracked files only: the experiment folder itself is always untracked.
+    status = _run(["git", "status", "--porcelain", "--untracked-files=no"], repo_dir)
     return {
         "commit": commit,
         "branch": _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], repo_dir),
-        "dirty": bool(status) if status is not None else None,
+        "uncommitted_changes": bool(status) if status is not None else None,
     }
 
 
@@ -100,6 +103,11 @@ class Experiment:
         (self.dir / "samples").mkdir()
         self._cfg = cfg
         self._samples = 0
+        # File writes go through one background thread: on this Jetson's SD card
+        # a write from the processing loop was measured stalling it for 0.5-1.6 s.
+        self._tasks: queue.Queue = queue.Queue()
+        self._io = threading.Thread(target=self._io_loop, name="experiment-io", daemon=True)
+        self._io.start()
         self._csv_file = None
         self._csv = None
         self.write_yaml("config.yaml", cfg.to_dict())
@@ -116,7 +124,20 @@ class Experiment:
     def write_yaml(self, name: str, data: Any) -> None:
         (self.dir / name).write_text(yaml.safe_dump(data, sort_keys=False))
 
+    def _io_loop(self) -> None:
+        while True:
+            task = self._tasks.get()
+            if task is None:
+                return
+            try:
+                task()
+            except Exception:
+                log.exception("experiment file write failed")
+
     def log_interval(self, row: Dict[str, Any]) -> None:
+        self._tasks.put(lambda: self._write_row(row))
+
+    def _write_row(self, row: Dict[str, Any]) -> None:
         if self._csv is None:
             self._csv_file = (self.dir / "metrics.csv").open("w", newline="")
             self._csv = csv.DictWriter(self._csv_file, fieldnames=list(row))
@@ -131,10 +152,15 @@ class Experiment:
         import cv2
 
         self._samples += 1
-        name = f"frame_{self._samples:03d}_t{elapsed_s:06.1f}s.jpg"
-        cv2.imwrite(str(self.dir / "samples" / name), image)
+        path = str(self.dir / "samples" / f"frame_{self._samples:03d}_t{elapsed_s:06.1f}s.jpg")
+        copy = image.copy()
+        self._tasks.put(lambda: cv2.imwrite(path, copy))
 
     def close(self) -> None:
+        """Flush pending writes."""
+        if self._io.is_alive():
+            self._tasks.put(None)
+            self._io.join(timeout=30)
         if self._csv_file is not None:
             self._csv_file.close()
             self._csv_file = None

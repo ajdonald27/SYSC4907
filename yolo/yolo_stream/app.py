@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import logging.handlers
+import queue
 import signal
 import threading
 import time
@@ -34,6 +36,8 @@ class App:
         self.exit_reason = "not started"
         self._capture, self._rtsp, self._detector = capture, rtsp, detector
         self.experiment: Optional[Experiment] = None
+        self._base_put = self._base_dropped = 0
+        self._final_counts = (0, 0)
 
     def request_stop(self, reason: str) -> None:
         if not self.stop_event.is_set():
@@ -46,7 +50,7 @@ class App:
         for sig in (signal.SIGINT, signal.SIGTERM):
             signal.signal(sig, lambda s, _f: self.request_stop(f"signal {signal.Signals(s).name}"))
 
-    def _build(self) -> None:
+    def _load_detector(self) -> None:
         cfg = self.cfg
         if self._detector is None and cfg.mode == "detect":
             from .detector import Detector
@@ -54,6 +58,9 @@ class App:
             log.info("loading model %s", cfg.model.weights)
             self._detector = Detector(cfg.model)
             self._detector.warmup(cfg.stream.width, cfg.stream.height)
+
+    def _build(self) -> None:
+        cfg = self.cfg
         if self._rtsp is None:
             import gi
 
@@ -77,22 +84,37 @@ class App:
         """Run until stopped. Returns a process exit code (0 = clean)."""
         cfg = self.cfg
         self.experiment = exp = Experiment(cfg, self.base_dir)
-        handler = logging.FileHandler(exp.log_path)
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        file_handler = logging.FileHandler(exp.log_path)
+        file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        # Log to the file through a queue so disk writes never block the loop.
+        log_queue: queue.Queue = queue.Queue()
+        handler = logging.handlers.QueueHandler(log_queue)
+        listener = logging.handlers.QueueListener(log_queue, file_handler)
+        listener.start()
         logging.getLogger().addHandler(handler)
         log.info("experiment folder: %s", exp.dir)
         self._install_signal_handlers()
         code = 0
         try:
             self._build()
+            self._rtsp.start()
+            # Open the camera before the model: with CUDA initialised first, Argus
+            # failed to create a capture session (InsufficientMemory) on this board.
+            self._capture.start()
+            self._load_detector()
             if self._detector is not None:
                 exp.write_json("model.json", self._detector.identity())
             else:
                 exp.write_json("model.json", {"weights": None, "note": "raw mode, no model loaded"})
-            self._rtsp.start()
-            self._capture.start()
-            self.metrics = Metrics()  # start the clock after model load and warmup
-            self._loop()
+            # Start the clock and frame counts after model load and warmup.
+            self.metrics = Metrics()
+            self._base_put, self._base_dropped = self.buffer.put_count, self.buffer.dropped_count
+            try:
+                self._loop()
+            finally:
+                self.metrics.finish()
+                self._final_counts = (self.buffer.put_count - self._base_put,
+                                      self.buffer.dropped_count - self._base_dropped)
         except Exception:
             log.exception("fatal error")
             self.exit_reason = "error"
@@ -105,7 +127,7 @@ class App:
                 except Exception:
                     log.exception("error stopping %s", name)
                     code = 1
-            summary = self.metrics.summary(self.buffer.put_count, self.buffer.dropped_count)
+            summary = self.metrics.summary(*self._final_counts)
             summary["exit_reason"] = self.exit_reason
             summary["exit_code"] = code
             summary["mode"] = cfg.mode
@@ -116,7 +138,8 @@ class App:
             log.info("summary: %s", summary)
             log.info("stopped (%s), exit code %d", self.exit_reason, code)
             logging.getLogger().removeHandler(handler)
-            handler.close()
+            listener.stop()
+            file_handler.close()
         return code
 
     def _loop(self) -> None:
@@ -127,11 +150,13 @@ class App:
         next_sample = m.start_time + min(2.0, cfg.experiment.sample_interval_s)
         last_frame = time.monotonic()
         tag = "RAW" if cfg.mode == "raw" else Path(cfg.model.weights).stem
+        log.info("processing started (%s, %d fps)", tag, cfg.stream.fps)
         while not self.stop_event.is_set():
             now = time.monotonic()
             if cfg.duration_s and now - m.start_time >= cfg.duration_s:
                 self.request_stop("duration reached")
                 break
+            t_wait = time.perf_counter()
             frame = self.buffer.get(timeout=_FRAME_TIMEOUT_S)
             if frame is None:
                 if self._capture.error:
@@ -143,6 +168,7 @@ class App:
             image = frame.image
 
             t0 = time.perf_counter()
+            wait_s = t0 - t_wait
             detections = self._detector.infer(image) if self._detector is not None else []
             t1 = time.perf_counter()
             draw_detections(image, detections, cfg.overlay)
@@ -153,7 +179,8 @@ class App:
             t2 = time.perf_counter()
             pushed = self._rtsp.push(image)
             t3 = time.perf_counter()
-            m.record(t1 - t0, t2 - t1, t3 - t2, len(detections), pushed)
+            m.record(t1 - t0, t2 - t1, t3 - t2, len(detections), pushed,
+                     wait_s=wait_s, age_s=time.monotonic() - frame.timestamp)
 
             now = time.monotonic()
             if now >= next_sample and exp.wants_sample():
@@ -161,7 +188,7 @@ class App:
                 next_sample = now + cfg.experiment.sample_interval_s
             if now >= next_log:
                 row = m.interval()
-                row["buffer_dropped"] = self.buffer.dropped_count
+                row["buffer_dropped"] = self.buffer.dropped_count - self._base_dropped
                 row["viewer"] = int(pushed is not None)
                 exp.log_interval(row)
                 log.info("stats: %s", row)
