@@ -1,0 +1,175 @@
+# Engineering log
+
+All times are local (EST) on the Jetson. Experiment folders are under
+[`../experiments/`](../experiments/). Numbers are copied from the files named
+next to them; nothing here is estimated.
+
+## 2026-11-23
+
+### 22:18 — Environment survey
+
+Commands: `cat /etc/nv_tegra_release`, `uname -r`, `dpkg -l | grep …`,
+`gst-inspect-1.0 <element>`, `python3 -c "import gi …"`.
+
+| Item | Finding |
+|------|---------|
+| Platform | L4T R36.4.7, kernel 5.15.148-tegra, Python 3.10.12, 7.4 GB RAM, power mode 25W |
+| CUDA / cuDNN / TensorRT | CUDA 12.6, cuDNN 9.3.0, TensorRT 10.3.0 (apt, with `python3-libnvinfer`) |
+| GStreamer | 1.20.3; `nvarguscamerasrc`, `nvvidconv`, `appsrc`, `appsink`, `rtph264pay` present |
+| H.264 encoders | `nvv4l2h264enc` and `nvv4l2h265enc` **not installed**; `x264enc` and `openh264enc` present |
+| System OpenCV | 4.8.0 with GStreamer support |
+| Missing | `pip`, `venv`, PyTorch, Ultralytics, GstRtspServer bindings (`Namespace GstRtspServer not available`) |
+
+Decision: software encoding with `x264enc`. Capture and RTSP through PyGObject
+rather than OpenCV, because Ultralytics installs a PyPI OpenCV wheel without
+GStreamer support.
+
+Documentation read: Ultralytics Jetson guide and YOLO26 model page. Taken from
+them: PyTorch 2.10.0 / torchvision 0.25.0 wheels for JetPack 6 from the
+Ultralytics assets release, cuDSS as a required extra library, `yolo26n.pt` as
+the pretrained detection weight, TensorRT engines are device-specific.
+
+### 22:25 — Dependency installation
+
+- An attempt to install tools into the home directory without `sudo` (a
+  standalone `uv` binary and unpacked `.deb` files) was blocked by the session's
+  permission policy. Not pursued further.
+- 22:34 — Andrew installed the system packages:
+  `sudo apt install python3-pip python3-venv gir1.2-gst-rtsp-server-1.0 libgstrtspserver-1.0-0`.
+  No existing JetPack package was changed (checked in `/var/log/dpkg.log`).
+- 22:35 — `python3 -m venv --system-site-packages .venv`, then the two PyTorch
+  wheels and `pip install ultralytics`. The install took about 35 minutes; the
+  SD card was the bottleneck (60 % I/O wait in `top`).
+- Andrew installed cuDSS 0.7.1 following the Ultralytics guide.
+- 23:10 — Result: torch 2.10.0 with `cuda=True` (device "Orin"), torchvision
+  0.25.0, ultralytics 8.4.218, numpy 2.2.6 and opencv-python 5.1.0 inside the
+  venv; system `gi` and `tensorrt` 10.3.0 still importable from it.
+
+### 22:32 — Unit tests
+
+`python3 -m unittest discover -s tests -t .` — 40 tests. One failure in my own
+test (it sampled a pixel that the status line covers); fixed the test. After the
+RTSP packages were installed the RTSP round-trip test stopped being skipped and
+passed. 40/40 pass with both the system Python and the venv.
+
+### 22:35 — First camera run, raw mode
+
+`python3 -m yolo_stream --raw --duration 25 --label camera-raw`, with
+`scripts/record_stream.sh` as viewer.
+Folder: `20261123-223513_camera-raw_raw`.
+
+- Camera opened, 720p stream recorded (2.8 MB, 9.9 s), exit code 0.
+- Processed rate 13.0 fps, below the 15 fps nominal. This run overlapped the
+  pip install, so the number is not representative. Root causes were found
+  later (23:17). Raw mode was re-measured at the end of the session.
+
+### 22:36 — Error: Argus stops creating capture sessions
+
+A throwaway timing script of mine raised an exception and exited without
+setting the capture pipeline to `NULL`. Afterwards:
+
+```
+(Argus) Error Timeout: … ClientSocketManager.cpp, function send()
+… gstnvarguscamerasrc.cpp, execute:805 Failed to create CaptureSession
+```
+
+and a plain `gst-launch-1.0 nvarguscamerasrc … ! fakesink` hung. I could not
+restart the daemon (no `sudo`). At 22:42 the same `gst-launch` test worked
+again without a restart.
+
+Lessons applied: the application always sets the capture pipeline to `NULL` in a
+`finally` block; the README warns against `kill -9`; the capture module's
+error path was confirmed to report this failure ("capture pipeline reached end
+of stream") instead of hanging.
+
+### 23:11 — Error: camera fails when the model is loaded first
+
+`.venv/bin/python -m yolo_stream --duration 40 --label detect-first`
+Folder: `20261123-231133_detect-first_detect` (kept as the failure record).
+
+```
+gstnvarguscamerasrc.cpp, execute:805 Failed to create CaptureSession
+RuntimeError: capture failed: capture pipeline reached end of stream
+```
+
+`journalctl -u nvargus-daemon` showed
+`SCF: Error InsufficientMemory … CaptureServiceDeviceViCsi.cpp, function open()`.
+`/proc/meminfo` right after: `CmaFree: 25996 kB` of `CmaTotal: 262144 kB`,
+while 5.4 GB of ordinary memory was available. The camera worked standalone
+seconds later.
+
+Fix: open the camera before loading the model (`app.py`). Retest at 23:13
+passed and every later run has started cleanly (7 consecutive detection runs).
+I did not prove the mechanism; "CUDA initialisation leaves too little
+contiguous memory for the CSI capture buffers" is my interpretation of the two
+log lines above.
+
+Also fixed here: Ultralytics 8.4.218 warns that `half` is deprecated in favour
+of `quantize`; the detector now passes `quantize=16` only when `model.half` is
+true.
+
+### 23:13 — First successful detection run
+
+Folder: `20261123-231308_detect-first_detect`.
+
+- YOLO26n on CUDA, boxes drawn, stream recorded by a local viewer
+  (`stream_sample.mp4`: 1280×720, 15/1 fps, 11.9 s), exit code 0.
+- Inference 48.0 ms mean (this is the whole `predict()` call: preprocessing,
+  model, postprocessing).
+- Reported 13.54 fps with dips in individual 5 s intervals (6.6, 13.3, 14.2).
+- Scene: the camera was looking at the underside of a desk at night. The only
+  detections were low-confidence false positives, e.g. `bed 0.26` on a plastic
+  bag (`samples/frame_004_t0032.1s.jpg`). This shows the overlay path works; it
+  says nothing about detection quality.
+
+### 23:14–23:19 — Finding the frame-rate dips
+
+Added timing for the wait on the frame buffer, the capture-to-push age, and
+the interval between processed frames.
+
+| Observation | Evidence | Fix |
+|-------------|----------|-----|
+| The loop never waits for the camera (max 0.6 ms) and inference never exceeds the frame period by much (max 69 ms) | `20261123-231445_detect-timing_detect/metrics.json` | — |
+| Summary frame rate was diluted by camera teardown time (elapsed was read after shutdown) | 369 frames at 25.15 s, but only 408 at "30.15 s" | Stop the metrics clock when the loop ends |
+| Dips line up with sample-image saves at 2, 12, 22 s | 13.33 fps in the 10–15 s interval | Write samples on a background thread |
+| One 1625 ms gap between frames at the first statistics write | ad-hoc 20 s run printing `loop_interval` values over 90 ms: `[(75, 1625)]` | Write CSV rows and the log file on background threads too |
+
+Retest (ad-hoc 30 s run): no interval over 90 ms, `loop_interval` max 76.2 ms,
+15.0 fps. Conclusion: any file write from the processing thread can stall for
+0.5–1.6 s on this SD card, so the loop now does no file I/O.
+
+### 23:21 — Reconnect and shutdown test
+
+`scripts/test_reconnect_shutdown.sh`
+Folder: `20261123-232114_reconnect-shutdown_detect` (`reconnect_shutdown.txt`).
+
+- Three viewers in sequence: first decoded frame after 0.11 s, 0.12 s, 0.13 s;
+  119–120 frames each in 8 s. `run.log` shows three media sessions.
+- SIGINT to exit: 3.34 s, exit code 0. Camera reopened immediately afterwards
+  with `gst-launch-1.0` (30 frames).
+- The first attempt at this script reported "exit code 127" because `wait` ran
+  inside a pipe subshell. That was a script bug, fixed; the first folder was
+  discarded and the test rerun.
+
+### 23:22 — Five-minute sustained run
+
+`scripts/test_sustained.sh 300`
+Folder: `20261123-232211_sustained_detect`. Git commit `d890101`, no
+uncommitted changes.
+
+| Measure | Value | Source |
+|---------|-------|--------|
+| Duration | 300.0 s | `metrics.json` |
+| Frames captured / processed | 9002 / 4500 | `metrics.json` |
+| Processed frame rate | 15.0 fps; per-5 s interval min 14.96, max 15.06 | `metrics.json`, `metrics.csv` |
+| Frames dropped at buffer | 4502 (by design: 30 fps in, 15 fps out) | `metrics.json` |
+| RTSP pushes refused | 0 | `metrics.json` |
+| Inference | mean 45.9 ms, p50 45.9, p95 50.1, max 69.2 | `metrics.json` |
+| Capture-to-push age | mean 63.5 ms, p95 80.5, max 91.6 | `metrics.json` |
+| Viewer | first frame 0.12 s, 4125 frames in 275 s, 15.0 fps, no error | `viewer.json` |
+| Errors or warnings in log | 0 | `run.log` |
+| Exit | "duration reached", code 0 | `metrics.json` |
+| Temperature | tj 47.6 °C at start, 49.6 °C at end | `tegrastats.log` |
+
+Detections during this run (3490 boxes on 2731 frames) are again false
+positives on a static scene with no COCO objects in it.
