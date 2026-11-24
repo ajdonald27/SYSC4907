@@ -104,7 +104,10 @@ come from the weights. To use TensorRT, export on this Jetson (engines are
 device-specific) and point `model.weights` at the result:
 
 ```bash
-.venv/bin/yolo export model=yolo26n.pt format=engine quantize=16 imgsz=640
+# once: export dependencies (the automatic install fails on Jetson)
+.venv/bin/pip install "onnx>=1.12.0,<2.0.0" "onnxslim>=0.1.71" \
+  https://github.com/ultralytics/assets/releases/download/v0.0.0/onnxruntime_gpu-1.23.0-cp310-cp310-linux_aarch64.whl
+.venv/bin/yolo export model=yolo26n.pt format=engine quantize=16 imgsz=640 device=0   # about 11 minutes
 .venv/bin/python -m yolo_stream --weights yolo26n.engine --label trt-fp16
 ```
 
@@ -123,8 +126,16 @@ Each run creates `experiments/<timestamp>_<label>_<mode>/`:
 | `metrics.json` | final frame counts, per-stage timing (mean/p50/p95/max), exit reason |
 | `samples/` | annotated frames saved during the run |
 
-`scripts/record_stream.sh OUT.mp4 [SECONDS] [URL]` records the RTSP stream as a
-viewer would receive it, for sample video.
+Helper scripts (all act as RTSP viewers on the Jetson itself):
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/check_env.sh` | list required GStreamer elements and Python modules |
+| `scripts/record_stream.sh OUT.mp4 [SECONDS] [URL]` | record the stream without re-encoding |
+| `scripts/rtsp_probe.py [--seconds N] [URL]` | decode the stream; report time to first frame and frame count |
+| `scripts/run_with_viewer.sh SECONDS [args…]` | run the app and record a clip into the experiment folder |
+| `scripts/test_reconnect_shutdown.sh` | reconnect, SIGINT timing and camera-reuse test |
+| `scripts/test_sustained.sh [SECONDS]` | sustained run with a viewer and `tegrastats` log |
 
 ## Tests
 

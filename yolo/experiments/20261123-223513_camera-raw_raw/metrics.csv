@@ -1,0 +1,5 @@
+elapsed_s,fps,inference_mean_ms,inference_max_ms,processed,buffer_dropped,viewer
+5.01,10.57,0.0,0.0,53,50,0
+10.07,12.64,0.0,0.0,117,138,1
+15.09,14.96,0.0,0.0,192,214,1
+20.11,12.35,0.0,0.0,254,302,0

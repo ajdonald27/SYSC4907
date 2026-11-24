@@ -1,0 +1,15 @@
+{
+  "python": "3.10.12",
+  "kernel": "5.15.148-tegra",
+  "machine": "aarch64",
+  "l4t": "# R36 (release), REVISION: 4.7, GCID: 42132812, BOARD: generic, EABI: aarch64, DATE: Thu Sep 18 22:54:44 UTC 2025",
+  "ultralytics": null,
+  "torch": null,
+  "torchvision": null,
+  "numpy": "1.21.5",
+  "opencv-python": null,
+  "PyYAML": "5.4.1",
+  "tensorrt": "10.3.0",
+  "cv2": "4.8.0",
+  "gstreamer": "GStreamer 1.20.3"
+}

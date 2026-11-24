@@ -1,0 +1,33 @@
+{
+  "elapsed_s": 1.01,
+  "frames_captured": 0,
+  "frames_processed": 0,
+  "frames_dropped_at_buffer": 0,
+  "frames_pushed_to_rtsp": 0,
+  "frames_push_failed": 0,
+  "frames_without_viewer": 0,
+  "capture_fps": 0.0,
+  "processed_fps": 0.0,
+  "detections_total": 0,
+  "frames_with_detections": 0,
+  "timing": {
+    "inference": {
+      "count": 0
+    },
+    "overlay": {
+      "count": 0
+    },
+    "push": {
+      "count": 0
+    },
+    "total": {
+      "count": 0
+    }
+  },
+  "exit_reason": "error",
+  "exit_code": 1,
+  "mode": "detect",
+  "rtsp_clients_connected": 1,
+  "rtsp_clients_closed": 1,
+  "rtsp_sessions_started": 0
+}

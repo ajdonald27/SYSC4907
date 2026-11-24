@@ -1,0 +1,15 @@
+2026-11-23 22:35:13,110 INFO yolo_stream.app: experiment folder: /home/andrew-tawfik/dev/SYSC4907/yolo/experiments/20261123-223513_camera-raw_raw
+2026-11-23 22:35:13,147 INFO yolo_stream.app: h264 encoder: x264enc
+2026-11-23 22:35:13,150 INFO yolo_stream.rtsp: rtsp launch: ( appsrc name=src is-live=true format=time do-timestamp=true block=false max-buffers=2 leaky-type=downstream caps=video/x-raw,format=BGR,width=1280,height=720,framerate=15/1 ! videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency speed-preset=ultrafast bitrate=2500 key-int-max=15 ! h264parse ! rtph264pay name=pay0 pt=96 config-interval=1 )
+2026-11-23 22:35:13,156 INFO yolo_stream.rtsp: rtsp server listening on rtsp://<jetson-ip>:8554/detections
+2026-11-23 22:35:13,156 INFO yolo_stream.capture: capture pipeline: nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM),width=1920,height=1080,format=NV12,framerate=30/1 ! nvvidconv flip-method=2 ! video/x-raw,width=1280,height=720,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! appsink name=sink max-buffers=1 drop=true sync=false emit-signals=false
+2026-11-23 22:35:19,247 INFO yolo_stream.app: stats: {'elapsed_s': 5.01, 'fps': 10.57, 'inference_mean_ms': 0.0, 'inference_max_ms': 0.0, 'processed': 53, 'buffer_dropped': 50, 'viewer': 0}
+2026-11-23 22:35:20,503 INFO yolo_stream.rtsp: rtsp client connected: 127.0.0.1 (#1)
+2026-11-23 22:35:20,513 INFO yolo_stream.rtsp: rtsp media session #1 started
+2026-11-23 22:35:23,449 INFO yolo_stream.app: stats: {'elapsed_s': 10.07, 'fps': 12.64, 'inference_mean_ms': 0.0, 'inference_max_ms': 0.0, 'processed': 117, 'buffer_dropped': 138, 'viewer': 1}
+2026-11-23 22:35:29,416 INFO yolo_stream.app: stats: {'elapsed_s': 15.09, 'fps': 14.96, 'inference_mean_ms': 0.0, 'inference_max_ms': 0.0, 'processed': 192, 'buffer_dropped': 214, 'viewer': 1}
+2026-11-23 22:35:30,446 INFO yolo_stream.rtsp: rtsp media session ended (no viewers)
+2026-11-23 22:35:30,447 INFO yolo_stream.rtsp: rtsp client closed: 127.0.0.1
+2026-11-23 22:35:33,484 INFO yolo_stream.app: stats: {'elapsed_s': 20.11, 'fps': 12.35, 'inference_mean_ms': 0.0, 'inference_max_ms': 0.0, 'processed': 254, 'buffer_dropped': 302, 'viewer': 0}
+2026-11-23 22:35:42,683 INFO yolo_stream.app: summary: {'elapsed_s': 25.16, 'frames_captured': 705, 'frames_processed': 327, 'frames_dropped_at_buffer': 377, 'frames_pushed_to_rtsp': 136, 'frames_push_failed': 0, 'frames_without_viewer': 191, 'capture_fps': 28.02, 'processed_fps': 13.0, 'detections_total': 0, 'frames_with_detections': 0, 'timing': {'inference': {'count': 327, 'mean_ms': 0.003, 'p50_ms': 0.003, 'p95_ms': 0.004, 'max_ms': 0.004}, 'overlay': {'count': 327, 'mean_ms': 0.2, 'p50_ms': 0.193, 'p95_ms': 0.24, 'max_ms': 1.202}, 'push': {'count': 327, 'mean_ms': 0.43, 'p50_ms': 0.01, 'p95_ms': 1.204, 'max_ms': 2.895}, 'total': {'count': 327, 'mean_ms': 0.633, 'p50_ms': 0.22, 'p95_ms': 1.428, 'max_ms': 3.056}}, 'exit_reason': 'duration reached', 'exit_code': 0, 'mode': 'raw', 'rtsp_clients_connected': 1, 'rtsp_clients_closed': 1, 'rtsp_sessions_started': 1}
+2026-11-23 22:35:42,685 INFO yolo_stream.app: stopped (duration reached), exit code 0

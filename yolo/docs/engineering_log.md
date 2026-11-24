@@ -99,7 +99,7 @@ while 5.4 GB of ordinary memory was available. The camera worked standalone
 seconds later.
 
 Fix: open the camera before loading the model (`app.py`). Retest at 23:13
-passed and every later run has started cleanly (7 consecutive detection runs).
+passed and all nine later detection runs started cleanly.
 I did not prove the mechanism; "CUDA initialisation leaves too little
 contiguous memory for the CSI capture buffers" is my interpretation of the two
 log lines above.
@@ -173,3 +173,56 @@ uncommitted changes.
 
 Detections during this run (3490 boxes on 2731 frames) are again false
 positives on a static scene with no COCO objects in it.
+
+### 23:28 — TensorRT export
+
+`.venv/bin/yolo export model=yolo26n.pt format=engine quantize=16 imgsz=640 device=0`
+
+- First attempt failed: Ultralytics tried to auto-install
+  `onnxruntime-gpu[cuda]`, which has no PyPI build for this platform
+  (`No matching distribution found`), so `onnx` was not installed either
+  (`No module named 'onnx'`).
+- Fix: `.venv/bin/pip install "onnx>=1.12.0,<2.0.0" "onnxslim>=0.1.71"` plus the
+  Jetson `onnxruntime_gpu-1.23.0` wheel named in the Ultralytics Jetson guide.
+  Installed onnx 1.23.2, onnxslim 0.1.99, onnxruntime-gpu 1.23.0. System
+  TensorRT 10.3.0 was used for the build and was not modified.
+- Second attempt succeeded: engine built in 564 s (682 s including ONNX
+  export), `yolo26n.engine`, 8.0 MB.
+
+### 23:41 — TensorRT FP16 run (two minutes)
+
+`scripts/test_sustained.sh 120 --weights yolo26n.engine`
+Folder: `20261123-234154_trt-fp16_detect` (renamed from `…_sustained_detect`
+so it is not confused with the five-minute run).
+
+| Measure | PyTorch FP32 (5 min) | TensorRT FP16 (2 min) |
+|---------|----------------------|-----------------------|
+| Inference mean / p95 / max | 45.9 / 50.1 / 69.2 ms | 20.4 / 24.0 / 51.8 ms |
+| Capture-to-push age mean / p95 | 63.5 / 80.5 ms | 38.5 / 56.1 ms |
+| Processed frame rate | 15.0 fps | 15.0 fps |
+| Refused pushes, exit code | 0, 0 | 0, 0 |
+
+Both figures include Python pre- and post-processing. No accuracy comparison
+between the two was made.
+
+### 23:44 — Raw mode re-measured
+
+A rerun of raw mode again showed 13.4 fps with 26.7 fps "captured". Cause: in
+raw mode there is no model load, so the metrics clock started about 3 s before
+the sensor delivered its first frame. Fix: wait for the first frame before
+starting the clock (`App._wait_for_first_frame`). The run with the wrong clock
+was discarded.
+
+Retest, folder `20261123-234529_camera-raw_raw`: 900 frames captured and 450
+processed in 30.0 s (30.0 / 15.0 fps), exit code 0.
+
+### Next actions
+
+1. Open the stream in VLC on the Mac and record the result (test T8), then
+   measure latency (T9).
+2. Put a person or known object in front of the camera and confirm correct
+   boxes and picture orientation (T4).
+3. Decide whether the TensorRT engine becomes the default, after a five-minute
+   run with it.
+4. Have the proposed performance targets reviewed.
+5. Later milestones: drone weights, tracking, radar integration.

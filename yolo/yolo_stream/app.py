@@ -59,6 +59,16 @@ class App:
             self._detector = Detector(cfg.model)
             self._detector.warmup(cfg.stream.width, cfg.stream.height)
 
+    def _wait_for_first_frame(self) -> None:
+        """The sensor takes a few seconds to start; keep that out of the metrics."""
+        deadline = time.monotonic() + _STALL_LIMIT_S
+        while self.buffer.put_count == 0 and not self.stop_event.is_set():
+            if self._capture.error:
+                raise RuntimeError(f"capture failed: {self._capture.error}")
+            if time.monotonic() > deadline:
+                raise RuntimeError(f"no frames from camera for {_STALL_LIMIT_S:.0f} s")
+            time.sleep(0.02)
+
     def _build(self) -> None:
         cfg = self.cfg
         if self._rtsp is None:
@@ -106,7 +116,8 @@ class App:
                 exp.write_json("model.json", self._detector.identity())
             else:
                 exp.write_json("model.json", {"weights": None, "note": "raw mode, no model loaded"})
-            # Start the clock and frame counts after model load and warmup.
+            self._wait_for_first_frame()
+            # Start the clock and frame counts once frames flow and the model is warm.
             self.metrics = Metrics()
             self._base_put, self._base_dropped = self.buffer.put_count, self.buffer.dropped_count
             try:
