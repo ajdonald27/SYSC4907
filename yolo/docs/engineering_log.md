@@ -226,3 +226,47 @@ processed in 30.0 s (30.0 / 15.0 fps), exit code 0.
    run with it.
 4. Have the proposed performance targets reviewed.
 5. Later milestones: drone weights, tracking, radar integration.
+
+## 2026-11-24
+
+### 00:03 — VLC on the Mac
+
+- Direct to `192.168.102.51` and to the Tailscale address `100.95.175.87`:
+  `live555 demux error: Failed to connect`. On the Jetson, `ss -ltn` showed the
+  server listening on `0.0.0.0:8554`, `scripts/rtsp_probe.py` decoded the
+  stream through both addresses, and `run.log` showed no attempt from the Mac.
+  `tailscale status` showed the Mac on a 10.0.0.x network, which explains the
+  Wi-Fi address. Why port 8554 is unreachable over Tailscale while SSH works
+  was not determined (candidates: a Tailscale ACL, macOS blocking VLC).
+- Workaround: `LocalForward 8554 localhost:8554` in the Mac's SSH config, then
+  `VLC --rtsp-tcp rtsp://localhost:8554/detections`. Andrew saw the annotated
+  stream; the log shows an 83 s viewer session (00:15:26–00:16:49) in
+  `20261124-001443_mac-vlc_detect`.
+- 00:13 — the session running the stream restarted and the application received
+  SIGTERM; it exited with code 0 (`20261124-000844_mac-vlc_detect/run.log`).
+- A 20-minute run before that (`20261123-234719_mac-vlc_detect`) processed
+  17998 frames in 1200 s (15.0 fps), exit code 0, with no viewer for most of it.
+
+### 00:17 — Picture upside down
+
+Seen in VLC. Changed the default `camera.flip_method` from 2 to 0 (code,
+`config/default.yaml`, test, README). The value 2 came from the `nv3dsink`
+preview command. Retest: `20261124-001754_mac-vlc_detect` samples are upright
+(printed text reads normally).
+
+### 00:19 — One more frame-rate dip
+
+In `20261124-001754_mac-vlc_detect/metrics.csv` the 5–10 s interval shows
+12.09 fps. In this run the console output was redirected to a file on the SD
+card, and console logging was still written directly from the processing
+thread. Console logging now goes through a queue as well (`__main__.py`). This
+cause is assumed from the earlier stall findings; it has not been confirmed by
+a rerun with redirected output.
+
+### Next actions
+
+1. Find out why port 8554 is blocked between the Mac and the Jetson, or accept
+   the SSH tunnel as the viewing method.
+2. Finish T8 (screenshot, 60 s, reopen from the Mac), then T9 (latency) and T4
+   (known object).
+3. Rerun with output redirected to a file to confirm the console-logging fix.

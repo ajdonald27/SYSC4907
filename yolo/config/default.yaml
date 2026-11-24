@@ -8,7 +8,7 @@ camera:
   width: 1920
   height: 1080
   fps: 30
-  flip_method: 2        # 180 degrees, matches the working nv3dsink preview
+  flip_method: 0        # 0 = none, 2 = rotate 180 (nvvidconv flip-method)
 
 stream:
   width: 1280

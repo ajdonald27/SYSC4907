@@ -9,7 +9,7 @@ class CapturePipelineTests(unittest.TestCase):
         p = capture_pipeline(from_dict(None))
         self.assertIn("nvarguscamerasrc sensor-id=0", p)
         self.assertIn("video/x-raw(memory:NVMM),width=1920,height=1080,format=NV12,framerate=30/1", p)
-        self.assertIn("nvvidconv flip-method=2", p)
+        self.assertIn("nvvidconv flip-method=0", p)
         self.assertIn("width=1280,height=720,format=BGRx", p)
         self.assertIn("format=BGR ! appsink", p)
 

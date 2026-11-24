@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import logging
+import logging.handlers
+import queue
 import sys
 from pathlib import Path
 
@@ -27,7 +29,22 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # Console logging goes through a queue: when stdout is redirected to a file,
+    # a direct write could block the processing loop on a slow disk.
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    log_queue: queue.Queue = queue.Queue()
+    listener = logging.handlers.QueueListener(log_queue, console)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().addHandler(logging.handlers.QueueHandler(log_queue))
+    listener.start()
+    try:
+        return _run(args)
+    finally:
+        listener.stop()
+
+
+def _run(args: argparse.Namespace) -> int:
     try:
         cfg = load_config(args.config)
         if args.raw:

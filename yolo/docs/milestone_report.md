@@ -8,10 +8,10 @@ The Jetson captures the IMX477, runs YOLO26n on the GPU, draws the results and
 serves a 1280×720, 15 fps H.264 RTSP stream at `/detections`. This was verified
 on the Jetson with local RTSP clients, including a five-minute run.
 
-**Playback in VLC on the Mac has not been tested**, and the model has not yet
-been shown a real object, so two parts of the milestone statement are still
-open. Both need a person at the hardware; the steps are in
-[test_procedure.md](test_procedure.md) (T8 and T4).
+The stream plays in VLC on the Mac **only through an SSH tunnel**; a direct
+connection to port 8554 fails and the cause has not been found. The model has
+not yet been shown a known object under test conditions. Details and remaining
+steps are in [test_procedure.md](test_procedure.md) (T8 and T4).
 
 ## What was demonstrated
 
@@ -35,17 +35,17 @@ proposals and have not been approved.
 
 ## Not demonstrated
 
-- **VLC on the Mac.** Not run. All viewers so far were GStreamer clients on the
-  Jetson over loopback. Network behaviour, VLC compatibility and end-to-end
-  latency are unknown.
+- **Direct VLC connection from the Mac.** Fails to connect on both the Wi-Fi
+  and Tailscale addresses. VLC does play the stream through an SSH tunnel
+  (seen by Andrew, 83 s session in the log), which shows VLC can decode it.
+  No screenshot was kept, and latency and reconnect from the Mac were not
+  measured.
 - **Correct detections.** The camera was looking at the underside of a desk.
   Every box in the evidence is a low-confidence false positive. The evidence
   shows that model output reaches the stream, not that detections are right.
 - **Drone detection.** The model is pretrained on COCO, which has no drone
   class. Nothing here validates drone detection. Custom weights are supported
   by configuration but none were available to load.
-- **Picture orientation.** Printed text in the saved frames does not read
-  normally; `flip_method` may need changing for how the camera is mounted.
 
 ## Limitations
 
@@ -76,7 +76,7 @@ package was removed, upgraded or downgraded. Everything else is inside
 
 ## Next steps
 
-1. Run T8 (VLC on the Mac) and T4 (known object, orientation); record results.
+1. Resolve or accept the tunnel for Mac viewing; finish T8, then T9 and T4.
 2. Review the proposed targets.
 3. Five-minute run with the TensorRT engine, then decide the default.
 4. Obtain or train drone weights and evaluate on drone footage.

@@ -27,7 +27,7 @@ involves the Mac.
 | T7 | Five-minute sustained run (P1, P2, P4) | PASS | [sustained run](../experiments/20261123-232211_sustained_detect/) |
 | T7a | Inference time during T7 (P3), PyTorch weights | FAIL on mean (45.9 ms vs ≤ 40 ms); p95 passes (50.1 ms vs ≤ 66 ms) | [metrics.json](../experiments/20261123-232211_sustained_detect/metrics.json) |
 | T7b | Inference time with TensorRT FP16 engine (P3), two-minute run | PASS (mean 20.4 ms, p95 24.0 ms) | [metrics.json](../experiments/20261123-234154_trt-fp16_detect/metrics.json) |
-| T8 | Playback in VLC on the Mac | NOT RUN | needs the Mac |
+| T8 | Playback in VLC on the Mac | PARTIAL: plays through an SSH tunnel; direct connection FAILS | [run.log](../experiments/20261124-001443_mac-vlc_detect/run.log), see T8 |
 | T9 | Glass-to-glass latency in VLC (P7) | NOT RUN | needs the Mac |
 | T10 | Custom drone weights | NOT RUN | no drone weights exist yet |
 
@@ -86,10 +86,7 @@ Stand in front of the camera, or hold up a cup, bottle or phone. Pass criteria:
 the object is boxed with the right label at confidence ≥ 0.5 in at least one
 image in `samples/` and visibly follows the object in the stream.
 
-Also check the picture orientation here. `flip_method: 2` was taken from the
-working preview command, but in the saved samples the printed text on a box in
-the scene does not read normally, so the image may be flipped relative to how
-the camera is mounted.
+Orientation was corrected on 2026-11-24 (`flip_method` 2 → 0); see T8.
 
 ## T5 / T6 — Reconnect, shutdown, camera reuse
 
@@ -151,7 +148,23 @@ inference mean 20.4 ms, p95 24.0 ms, max 51.8 ms, 15.0 fps, exit code 0. That
 meets P3, but it is a two-minute run and the default configuration still uses
 the `.pt` weights, so the five-minute result above stands as recorded.
 
-## T8 — VLC on the Mac — NOT RUN
+## T8 — VLC on the Mac — PARTIAL
+
+Result (2026-11-24, VLC 3.0.24 on macOS):
+
+| Path | Result |
+|------|--------|
+| `rtsp://192.168.102.51:8554/detections` (Jetson Wi-Fi address) | FAIL — `live555 demux error: Failed to connect`. The Mac was on a different network (10.0.0.x). |
+| `rtsp://100.95.175.87:8554/detections` (Tailscale), with and without `--rtsp-tcp` | FAIL — same error. No connection reached the Jetson (`run.log` shows none), although SSH over the same Tailscale link works. Cause not found. |
+| SSH tunnel (`LocalForward 8554 localhost:8554`), `--rtsp-tcp rtsp://localhost:8554/detections` | PASS — Andrew saw the annotated video. `run.log` shows a client connected from 00:15:26 to 00:16:49 (83 s); it appears as 127.0.0.1 because it arrives through the tunnel. |
+
+Not yet done for this test: a screenshot of the VLC window, the 60 s
+no-freeze check, and a close-and-reopen from the Mac. Viewing showed the
+picture was upside down; `camera.flip_method` was changed from 2 to 0 and the
+next sample frames are upright
+([frame](../experiments/20261124-001754_mac-vlc_detect/samples/frame_002_t0012.1s.jpg)).
+
+Original procedure:
 
 On the Jetson:
 

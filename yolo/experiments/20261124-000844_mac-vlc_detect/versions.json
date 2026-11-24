@@ -1,0 +1,18 @@
+{
+  "python": "3.10.12",
+  "kernel": "5.15.148-tegra",
+  "machine": "aarch64",
+  "l4t": "# R36 (release), REVISION: 4.7, GCID: 42132812, BOARD: generic, EABI: aarch64, DATE: Thu Sep 18 22:54:44 UTC 2025",
+  "ultralytics": "8.4.218",
+  "torch": "2.10.0",
+  "torchvision": "0.25.0",
+  "numpy": "2.2.6",
+  "opencv-python": "5.1.0.95",
+  "PyYAML": "5.4.1",
+  "tensorrt": "10.3.0",
+  "cv2": "5.1.0",
+  "gstreamer": "GStreamer 1.20.3",
+  "cuda_available": true,
+  "cuda": "12.6",
+  "cuda_device": "Orin"
+}

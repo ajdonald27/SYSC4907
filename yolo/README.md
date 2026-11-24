@@ -89,7 +89,7 @@ Unknown keys and out-of-range values are rejected at start-up. The main ones:
 |-----|---------|---------|
 | `mode` | `detect` | `raw` skips the model |
 | `camera.width/height/fps` | 1920 / 1080 / 30 | sensor mode requested from Argus |
-| `camera.flip_method` | 2 | `nvvidconv` flip, 2 = 180° |
+| `camera.flip_method` | 0 | `nvvidconv` flip: 0 = none, 2 = 180° |
 | `stream.width/height/fps` | 1280 / 720 / 15 | size and rate of the processed stream |
 | `stream.port`, `stream.path` | 8554, `/detections` | RTSP address |
 | `stream.encoder` | `auto` | first installed software encoder (`x264enc`, then `openh264enc`) |

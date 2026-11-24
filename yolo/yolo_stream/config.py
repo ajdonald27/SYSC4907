@@ -24,7 +24,7 @@ class CameraConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 30
-    flip_method: int = 2
+    flip_method: int = 0
 
 
 @dataclass
