@@ -23,7 +23,7 @@ stream:
 model:
   weights: yolo26n.pt   # pretrained COCO; set a path to custom drone weights (.pt or .engine)
   imgsz: 640
-  conf: 0.25
+  conf: 0.7             # minimum confidence for a box to be drawn
   device: auto          # auto = CUDA 0 if available, else cpu
   half: false           # true = FP16 inference for .pt weights
   classes: null         # e.g. [0] to keep only class 0

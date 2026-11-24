@@ -94,7 +94,7 @@ Unknown keys and out-of-range values are rejected at start-up. The main ones:
 | `stream.port`, `stream.path` | 8554, `/detections` | RTSP address |
 | `stream.encoder` | `auto` | first installed software encoder (`x264enc`, then `openh264enc`) |
 | `model.weights` | `yolo26n.pt` | pretrained name (downloaded on first use) or a path |
-| `model.imgsz`, `model.conf` | 640, 0.25 | inference size and confidence threshold |
+| `model.imgsz`, `model.conf` | 640, 0.7 | inference size and confidence threshold |
 | `model.classes` | all | list of class ids to keep |
 
 ### Custom drone weights and TensorRT

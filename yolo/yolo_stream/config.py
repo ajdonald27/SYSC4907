@@ -43,7 +43,7 @@ class StreamConfig:
 class ModelConfig:
     weights: str = "yolo26n.pt"  # pretrained name, or path to custom .pt / .engine
     imgsz: int = 640
-    conf: float = 0.25
+    conf: float = 0.7
     device: str = "auto"  # auto = CUDA device 0 if available, else cpu
     half: bool = False
     classes: Optional[List[int]] = None  # None = all classes

@@ -270,3 +270,17 @@ a rerun with redirected output.
 2. Finish T8 (screenshot, 60 s, reopen from the Mac), then T9 (latency) and T4
    (known object).
 3. Rerun with output redirected to a file to confirm the console-logging fix.
+
+### 00:21 — Confidence threshold raised to 0.7
+
+Requested by Andrew after viewing the stream: at 0.25 most boxes were weak
+guesses (`dining table 0.26`, `keyboard 0.32`). Default `model.conf` changed
+from 0.25 to 0.7 (code, `config/default.yaml`, README). Stream restarted:
+`20261124-002126_mac-vlc_detect`, `model.json` records `conf: 0.7`.
+
+This run uses the queued console logging with output redirected to a file. Its
+first three intervals read 15.06, 15.0 and 15.0 fps, where the previous run
+dipped to 12.09. That is consistent with the fix but is one short observation.
+
+All earlier experiment folders were recorded with `conf: 0.25` and
+`flip_method: 2`; each folder's `config.yaml` has the values it ran with.
