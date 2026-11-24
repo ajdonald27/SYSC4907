@@ -1,0 +1,10 @@
+# Experiment: TensorRT FP16 engine at the camera's 60 fps mode (1920x1080 is
+# the only IMX477 mode this driver offers above 30 fps).
+camera:
+  fps: 60
+stream:
+  fps: 60
+model:
+  weights: yolo26n.engine
+experiment:
+  label: trt-60fps

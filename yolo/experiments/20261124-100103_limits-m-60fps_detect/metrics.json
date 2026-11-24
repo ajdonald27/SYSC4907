@@ -1,0 +1,70 @@
+{
+  "elapsed_s": 70.0,
+  "frames_captured": 4200,
+  "frames_processed": 2880,
+  "frames_dropped_at_buffer": 1320,
+  "frames_pushed_to_rtsp": 1751,
+  "frames_push_failed": 0,
+  "frames_without_viewer": 1129,
+  "capture_fps": 60.0,
+  "processed_fps": 41.14,
+  "detections_total": 0,
+  "frames_with_detections": 0,
+  "timing": {
+    "inference": {
+      "count": 2880,
+      "mean_ms": 23.075,
+      "p50_ms": 23.092,
+      "p95_ms": 26.222,
+      "max_ms": 46.175
+    },
+    "overlay": {
+      "count": 2880,
+      "mean_ms": 0.471,
+      "p50_ms": 0.422,
+      "p95_ms": 0.866,
+      "max_ms": 4.907
+    },
+    "push": {
+      "count": 2880,
+      "mean_ms": 0.663,
+      "p50_ms": 0.849,
+      "p95_ms": 1.512,
+      "max_ms": 7.261
+    },
+    "total": {
+      "count": 2880,
+      "mean_ms": 24.209,
+      "p50_ms": 24.343,
+      "p95_ms": 27.953,
+      "max_ms": 49.169
+    },
+    "frame_wait": {
+      "count": 2880,
+      "mean_ms": 0.023,
+      "p50_ms": 0.02,
+      "p95_ms": 0.027,
+      "max_ms": 3.727
+    },
+    "frame_age": {
+      "count": 2880,
+      "mean_ms": 32.567,
+      "p50_ms": 32.199,
+      "p95_ms": 42.021,
+      "max_ms": 61.182
+    },
+    "loop_interval": {
+      "count": 2879,
+      "mean_ms": 24.297,
+      "p50_ms": 24.443,
+      "p95_ms": 28.08,
+      "max_ms": 46.587
+    }
+  },
+  "exit_reason": "duration reached",
+  "exit_code": 0,
+  "mode": "detect",
+  "rtsp_clients_connected": 2,
+  "rtsp_clients_closed": 2,
+  "rtsp_sessions_started": 1
+}

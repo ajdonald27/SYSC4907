@@ -1,0 +1,95 @@
+{
+  "image": "experiments/20261124-002538_mac-vlc-30fps_detect/samples/frame_001_t0002.0s.jpg",
+  "shape": [
+    720,
+    1280,
+    3
+  ],
+  "results": [
+    {
+      "weights": "yolo26n.engine",
+      "imgsz": 640,
+      "runs": 300,
+      "max_fps": 63.8,
+      "call_ms": {
+        "mean": 15.66,
+        "p50": 14.83,
+        "p95": 20.26,
+        "max": 22.36
+      },
+      "stage_mean_ms": {
+        "preprocess": 3.13,
+        "inference": 9.04,
+        "postprocess": 2.32
+      }
+    },
+    {
+      "weights": "yolo26s.engine",
+      "imgsz": 640,
+      "runs": 300,
+      "max_fps": 58.4,
+      "call_ms": {
+        "mean": 17.1,
+        "p50": 16.01,
+        "p95": 20.97,
+        "max": 26.17
+      },
+      "stage_mean_ms": {
+        "preprocess": 2.73,
+        "inference": 10.96,
+        "postprocess": 2.28
+      }
+    },
+    {
+      "weights": "yolo26m.engine",
+      "imgsz": 640,
+      "runs": 300,
+      "max_fps": 53.1,
+      "call_ms": {
+        "mean": 18.83,
+        "p50": 18.45,
+        "p95": 22.08,
+        "max": 24.68
+      },
+      "stage_mean_ms": {
+        "preprocess": 2.24,
+        "inference": 13.37,
+        "postprocess": 2.14
+      }
+    },
+    {
+      "weights": "yolo26n.pt",
+      "imgsz": 640,
+      "runs": 300,
+      "max_fps": 23.9,
+      "call_ms": {
+        "mean": 41.75,
+        "p50": 41.63,
+        "p95": 43.13,
+        "max": 46.93
+      },
+      "stage_mean_ms": {
+        "preprocess": 2.99,
+        "inference": 35.81,
+        "postprocess": 1.82
+      }
+    },
+    {
+      "weights": "yolo26s.pt",
+      "imgsz": 640,
+      "runs": 300,
+      "max_fps": 26.1,
+      "call_ms": {
+        "mean": 38.36,
+        "p50": 38.37,
+        "p95": 38.88,
+        "max": 39.65
+      },
+      "stage_mean_ms": {
+        "preprocess": 2.0,
+        "inference": 34.02,
+        "postprocess": 1.5
+      }
+    }
+  ]
+}

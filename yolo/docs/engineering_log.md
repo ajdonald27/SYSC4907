@@ -307,3 +307,51 @@ No boxes were drawn in this run (threshold 0.7, static scene), so overlay cost
 with many boxes at 30 fps was not exercised. Two minutes only; the default
 configuration remains 15 fps with the `.pt` weights. `test_sustained.sh` was
 changed so its duration argument overrides a config file's value.
+
+### 09:25 to 10:02 - Hardware limits: larger models and higher frame rates
+
+Question from Andrew: can the Jetson run yolo26s, and is 30 fps the limit?
+All figures below are in the 25W power mode (CPU capped at 1344 MHz, GPU at
+918 MHz). `MAXN_SUPER` exists on this board but needs sudo and was not tested.
+
+Exported `yolo26s.engine` (11 min) and `yolo26m.engine` (13 min), FP16, imgsz 640.
+
+Model alone, one 1280x720 frame, 300 calls, no camera or encoder
+(`scripts/bench_models.py`, results in `20261124-limits_bench/bench_25W.json`):
+
+| Weights | Mean per call | Max rate |
+|---------|---------------|----------|
+| yolo26n.engine | 15.7 ms | 63.8 fps |
+| yolo26s.engine | 17.1 ms | 58.4 fps |
+| yolo26m.engine | 18.8 ms | 53.1 fps |
+| yolo26n.pt | 41.8 ms | 23.9 fps |
+| yolo26s.pt | 38.4 ms | 26.1 fps |
+
+Full pipeline (camera, model, overlay, x264, one viewer), 70 s each,
+`scripts/test_sustained.sh 70 --config ... --weights ...`:
+
+| Run | Requested | Processed | Dropped at buffer | Inference mean | GPU mean | Peak power | Peak tj |
+|-----|-----------|-----------|-------------------|----------------|----------|------------|---------|
+| `20261124-095518_limits-s-30fps_detect` | 30 | 29.9 fps | 4 of 2100 | 26.6 ms | 57 % | 9.3 W | 50.0 C |
+| `20261124-095648_limits-m-30fps_detect` | 30 | 30.0 fps | 3 of 2101 | 26.5 ms | 43 % | 11.1 W | 53.2 C |
+| `20261124-095813_limits-n-60fps_detect` | 60 | 48.3 fps | 818 of 4198 | 19.5 ms | 64 % | 9.6 W | 52.5 C |
+| `20261124-095938_limits-s-60fps_detect` | 60 | 45.2 fps | 1037 of 4200 | 20.9 ms | 62 % | 10.6 W | 53.4 C |
+| `20261124-100103_limits-m-60fps_detect` | 60 | 41.1 fps | 1320 of 4200 | 23.1 ms | 64 % | 15.3 W | 58.0 C |
+
+Findings:
+
+- yolo26s and yolo26m both hold 30 fps end to end.
+- 30 fps is not the limit. With the camera in its 60 fps mode the pipeline
+  reached 48 (n), 45 (s) and 41 (m) fps. No model reached 60.
+- The camera offers 1920x1080 at 60 fps and 3840x2160 at 30 fps
+  (`v4l2-ctl --list-formats-ext`), so 60 fps is the sensor ceiling here.
+- Model size changes the per-frame time little (n to m adds about 4 ms), so
+  most of the time per frame is a fixed cost and not the network itself.
+  Which part of that cost dominates was not measured.
+- Inference is slower at 30 fps (26.6 ms) than at 60 fps (20.9 ms) for the same
+  yolo26s engine. Clock scaling under light load is the suspected cause; not confirmed.
+- RAM peaked at 3.66 of 7.6 GB.
+- `nvv4l2h264enc` is not installed, so H.264 encoding runs on the CPU (x264).
+
+Not tested: `MAXN_SUPER` mode, yolo26l/x, imgsz above 640, runs longer than
+70 s (thermal steady state), scenes with many boxes.
