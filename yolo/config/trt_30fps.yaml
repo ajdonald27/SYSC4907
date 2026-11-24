@@ -1,0 +1,7 @@
+# Experiment: TensorRT FP16 engine at 30 fps. Build the engine first (see README).
+stream:
+  fps: 30
+model:
+  weights: yolo26n.engine
+experiment:
+  label: trt-30fps

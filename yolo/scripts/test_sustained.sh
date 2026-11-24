@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 py=${PYTHON:-.venv/bin/python}
 secs=${1:-300}; [ $# -gt 0 ] && shift
 before=$(ls -d experiments/*/ 2>/dev/null | wc -l)
-"$py" -m yolo_stream --duration "$secs" --label sustained "$@" &
+"$py" -m yolo_stream --label sustained "$@" --duration "$secs" &
 app=$!
 exp=""
 for _ in $(seq 1 120); do

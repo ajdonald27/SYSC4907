@@ -284,3 +284,26 @@ dipped to 12.09. That is consistent with the fix but is one short observation.
 
 All earlier experiment folders were recorded with `conf: 0.25` and
 `flip_method: 2`; each folder's `config.yaml` has the values it ran with.
+
+### 00:23 — 30 fps with the TensorRT engine (two minutes)
+
+Question from Andrew: is the frame rate limited by the hardware? The 15 fps
+figure is the configured `stream.fps`. Test:
+`scripts/test_sustained.sh 120 --config config/trt_30fps.yaml --label trt-30fps`
+Folder: `20261124-002311_trt-30fps_detect`.
+
+| Measure | Value |
+|---------|-------|
+| Frames captured / processed | 3601 / 3600 in 120.0 s (30.0 fps); 1 dropped at the buffer |
+| Per-5 s interval frame rate | min 29.98, max 30.06 (23 intervals) |
+| Inference | mean 19.9 ms, p95 22.5 ms, max 26.4 ms |
+| Capture-to-push age | mean 33.8 ms, p95 52.4 ms |
+| Interval between frames | mean 33.3 ms, max 51.6 ms |
+| Viewer | 2850 frames decoded in 95 s, 30.0 fps, no error |
+| Refused pushes, exit code | 0, 0 |
+| CPU, GPU, temperature | about 35–40 % per core while a viewer was decoding on the Jetson, GR3D up to 70 %, tj 50.1 °C (`tegrastats.log`) |
+
+No boxes were drawn in this run (threshold 0.7, static scene), so overlay cost
+with many boxes at 30 fps was not exercised. Two minutes only; the default
+configuration remains 15 fps with the `.pt` weights. `test_sustained.sh` was
+changed so its duration argument overrides a config file's value.
