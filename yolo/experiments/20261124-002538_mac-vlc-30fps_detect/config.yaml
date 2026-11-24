@@ -1,0 +1,35 @@
+mode: detect
+duration_s: 2400.0
+camera:
+  source: argus
+  sensor_id: 0
+  width: 1920
+  height: 1080
+  fps: 30
+  flip_method: 0
+stream:
+  width: 1280
+  height: 720
+  fps: 30
+  port: 8554
+  path: /detections
+  encoder: auto
+  bitrate_kbps: 2500
+  keyframe_interval_s: 1.0
+model:
+  weights: yolo26n.engine
+  imgsz: 640
+  conf: 0.7
+  device: auto
+  half: false
+  classes: null
+overlay:
+  show_hud: true
+  line_thickness: 2
+  font_scale: 0.6
+experiment:
+  root: experiments
+  label: mac-vlc-30fps
+  log_interval_s: 5.0
+  sample_interval_s: 10.0
+  max_samples: 12
