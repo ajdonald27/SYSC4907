@@ -16,6 +16,7 @@ drone detection performance; see [docs/milestone_report.md](docs/milestone_repor
 | [docs/test_procedure.md](docs/test_procedure.md) | Test steps and pass/fail/not-run results with evidence |
 | [docs/engineering_log.md](docs/engineering_log.md) | Dated log of commands, errors, fixes and retests |
 | [docs/milestone_report.md](docs/milestone_report.md) | What was demonstrated and what is still limited |
+| [docs/hardware_limits.md](docs/hardware_limits.md) | How fast and how accurate each model is on the Jetson, and the recommended setting |
 
 ## Setup (Jetson, JetPack 6 / L4T 36.4)
 
