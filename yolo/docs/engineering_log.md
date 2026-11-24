@@ -390,3 +390,36 @@ Result, FP16 engines, imgsz 640, batch 1, 25W mode
 
 Not done: imgsz 960 and 1280 (each needs a new engine export), per-class
 results (for example person and car only), AP by object size.
+
+### 13:40 - Person and car breakdown, confidence sweep
+
+`scripts/eval_coco.py` gained `--classes` and `--sweep`. One validation run
+gives precision and recall at every confidence. Full 5000 images, imgsz 640,
+`20261124-coco-eval/coco_val_640_25W_person_car.json`.
+
+AP50-95 per class:
+
+| Engine | person | car |
+|--------|--------|-----|
+| yolo26n | 0.518 | 0.370 |
+| yolo26s | 0.596 | 0.469 |
+| yolo26m | 0.631 | 0.521 |
+
+Precision / recall in percent (IoU 0.5) by confidence threshold:
+
+| Class | Engine | 0.3 | 0.4 | 0.5 | 0.7 |
+|-------|--------|-----|-----|-----|-----|
+| person | yolo26n | 85 / 63 | 90 / 57 | 94 / 51 | 97 / 35 |
+| person | yolo26s | 82 / 73 | 89 / 68 | 93 / 62 | 97 / 46 |
+| person | yolo26m | 82 / 77 | 88 / 72 | 92 / 67 | 96 / 52 |
+| car | yolo26n | 78 / 47 | 85 / 39 | 90 / 32 | 96 / 18 |
+| car | yolo26s | 75 / 61 | 82 / 55 | 88 / 49 | 96 / 32 |
+| car | yolo26m | 75 / 68 | 82 / 62 | 87 / 55 | 94 / 38 |
+
+The best-F1 confidence is between 0.23 and 0.33 for every model and class.
+The current default of 0.7 gives up roughly a third of the person detections
+and half of the car detections that 0.4 would keep, for 6 to 14 points of
+precision. The default was not changed: the right value depends on how false
+alarms and misses are weighted, and on the radar check, which is not decided.
+These are per-image figures on COCO photos; a target seen over many video
+frames has more than one chance to be detected.
