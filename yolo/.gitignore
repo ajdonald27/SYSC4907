@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+# model weights and exported engines are downloaded/built, not versioned
+*.pt
+*.onnx
+*.engine

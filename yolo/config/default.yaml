@@ -1,0 +1,41 @@
+# IMX477 -> YOLO26n -> RTSP. Every key is optional; these are the defaults.
+mode: detect            # detect | raw (camera straight to RTSP, no model)
+duration_s: 0           # 0 = run until Ctrl-C
+
+camera:
+  source: argus         # argus (IMX477 on CAM1) | test (videotestsrc, no camera needed)
+  sensor_id: 0
+  width: 1920
+  height: 1080
+  fps: 30
+  flip_method: 2        # 180 degrees, matches the working nv3dsink preview
+
+stream:
+  width: 1280
+  height: 720
+  fps: 15
+  port: 8554
+  path: /detections     # rtsp://<jetson-ip>:8554/detections
+  encoder: auto         # auto (software) | x264enc | openh264enc | nvv4l2h264enc
+  bitrate_kbps: 2500
+  keyframe_interval_s: 1.0
+
+model:
+  weights: yolo26n.pt   # pretrained COCO; set a path to custom drone weights (.pt or .engine)
+  imgsz: 640
+  conf: 0.25
+  device: auto          # auto = CUDA 0 if available, else cpu
+  half: false
+  classes: null         # e.g. [0] to keep only class 0
+
+overlay:
+  show_hud: true
+  line_thickness: 2
+  font_scale: 0.6
+
+experiment:
+  root: experiments     # relative to yolo/
+  label: run
+  log_interval_s: 5
+  sample_interval_s: 10
+  max_samples: 12
