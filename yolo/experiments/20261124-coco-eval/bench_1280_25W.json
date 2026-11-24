@@ -1,0 +1,61 @@
+{
+  "image": "experiments/20261124-002538_mac-vlc-30fps_detect/samples/frame_005_t0042.0s.jpg",
+  "shape": [
+    720,
+    1280,
+    3
+  ],
+  "results": [
+    {
+      "weights": "yolo26m_1280.engine",
+      "imgsz": 1280,
+      "runs": 300,
+      "max_fps": 16.3,
+      "call_ms": {
+        "mean": 61.26,
+        "p50": 61.26,
+        "p95": 61.75,
+        "max": 62.28
+      },
+      "stage_mean_ms": {
+        "preprocess": 4.15,
+        "inference": 53.63,
+        "postprocess": 2.3
+      }
+    },
+    {
+      "weights": "yolo26n_1280.engine",
+      "imgsz": 1280,
+      "runs": 300,
+      "max_fps": 45.6,
+      "call_ms": {
+        "mean": 21.95,
+        "p50": 21.94,
+        "p95": 22.29,
+        "max": 22.52
+      },
+      "stage_mean_ms": {
+        "preprocess": 4.18,
+        "inference": 14.4,
+        "postprocess": 2.26
+      }
+    },
+    {
+      "weights": "yolo26s_1280.engine",
+      "imgsz": 1280,
+      "runs": 300,
+      "max_fps": 30.2,
+      "call_ms": {
+        "mean": 33.11,
+        "p50": 33.11,
+        "p95": 33.39,
+        "max": 34.52
+      },
+      "stage_mean_ms": {
+        "preprocess": 4.19,
+        "inference": 25.55,
+        "postprocess": 2.24
+      }
+    }
+  ]
+}

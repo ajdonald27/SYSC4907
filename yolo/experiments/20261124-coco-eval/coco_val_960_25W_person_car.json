@@ -1,0 +1,459 @@
+{
+  "dataset": "COCO val2017",
+  "images": 5000,
+  "results": [
+    {
+      "weights": "yolo26m_960.engine",
+      "imgsz": 960,
+      "map50_95": 0.4646,
+      "map50": 0.6826,
+      "precision_best_f1": 0.7019,
+      "recall_best_f1": 0.632,
+      "precision_at_conf_0.7": 0.8895,
+      "recall_at_conf_0.7": 0.4119,
+      "speed_ms_per_image": {
+        "preprocess": 4.46,
+        "inference": 31.51,
+        "loss": 0.05,
+        "postprocess": 5.03
+      },
+      "wall_s": 283.0,
+      "classes": {
+        "person": {
+          "ap50_95": 0.5876,
+          "ap50": 0.8452,
+          "best_f1": {
+            "conf": 0.391,
+            "precision": 0.823,
+            "recall": 0.7539,
+            "f1": 0.787
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.5502,
+              "recall": 0.8894,
+              "f1": 0.6798
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6798,
+              "recall": 0.8432,
+              "f1": 0.7527
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7625,
+              "recall": 0.796,
+              "f1": 0.7789
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8266,
+              "recall": 0.749,
+              "f1": 0.7859
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.8714,
+              "recall": 0.6967,
+              "f1": 0.7743
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.9091,
+              "recall": 0.6261,
+              "f1": 0.7415
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.9419,
+              "recall": 0.5285,
+              "f1": 0.6771
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.9735,
+              "recall": 0.3881,
+              "f1": 0.5549
+            },
+            {
+              "conf": 0.9,
+              "precision": 0.9917,
+              "recall": 0.0888,
+              "f1": 0.163
+            }
+          ]
+        },
+        "car": {
+          "ap50_95": 0.5408,
+          "ap50": 0.7655,
+          "best_f1": {
+            "conf": 0.334,
+            "precision": 0.7721,
+            "recall": 0.682,
+            "f1": 0.7242
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.5114,
+              "recall": 0.8108,
+              "f1": 0.6272
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6564,
+              "recall": 0.7471,
+              "f1": 0.6988
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7501,
+              "recall": 0.6955,
+              "f1": 0.7218
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8095,
+              "recall": 0.6427,
+              "f1": 0.7165
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.8527,
+              "recall": 0.5825,
+              "f1": 0.6922
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.8933,
+              "recall": 0.5195,
+              "f1": 0.6569
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.9392,
+              "recall": 0.4185,
+              "f1": 0.579
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.981,
+              "recall": 0.296,
+              "f1": 0.4548
+            },
+            {
+              "conf": 0.9,
+              "precision": 0.987,
+              "recall": 0.0792,
+              "f1": 0.1466
+            }
+          ]
+        }
+      }
+    },
+    {
+      "weights": "yolo26n_960.engine",
+      "imgsz": 960,
+      "map50_95": 0.3908,
+      "map50": 0.5732,
+      "precision_best_f1": 0.6504,
+      "recall_best_f1": 0.5345,
+      "precision_at_conf_0.7": 0.91,
+      "recall_at_conf_0.7": 0.2697,
+      "speed_ms_per_image": {
+        "preprocess": 5.66,
+        "inference": 18.59,
+        "loss": 0.05,
+        "postprocess": 6.15
+      },
+      "wall_s": 223.8,
+      "classes": {
+        "person": {
+          "ap50_95": 0.5348,
+          "ap50": 0.7862,
+          "best_f1": {
+            "conf": 0.315,
+            "precision": 0.8091,
+            "recall": 0.6875,
+            "f1": 0.7434
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.5278,
+              "recall": 0.8219,
+              "f1": 0.6428
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6958,
+              "recall": 0.7537,
+              "f1": 0.7236
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7951,
+              "recall": 0.6951,
+              "f1": 0.7417
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8635,
+              "recall": 0.6345,
+              "f1": 0.7315
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.9073,
+              "recall": 0.563,
+              "f1": 0.6948
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.9385,
+              "recall": 0.4825,
+              "f1": 0.6373
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.9663,
+              "recall": 0.3889,
+              "f1": 0.5546
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.9836,
+              "recall": 0.2504,
+              "f1": 0.3992
+            },
+            {
+              "conf": 0.9,
+              "precision": 0.9878,
+              "recall": 0.03,
+              "f1": 0.0582
+            }
+          ]
+        },
+        "car": {
+          "ap50_95": 0.4227,
+          "ap50": 0.6404,
+          "best_f1": {
+            "conf": 0.243,
+            "precision": 0.7146,
+            "recall": 0.5761,
+            "f1": 0.6379
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.4593,
+              "recall": 0.6919,
+              "f1": 0.5521
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6421,
+              "recall": 0.6048,
+              "f1": 0.6229
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7714,
+              "recall": 0.5355,
+              "f1": 0.6321
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8467,
+              "recall": 0.4619,
+              "f1": 0.5978
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.882,
+              "recall": 0.386,
+              "f1": 0.537
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.9204,
+              "recall": 0.3073,
+              "f1": 0.4607
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.9562,
+              "recall": 0.2162,
+              "f1": 0.3527
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.9878,
+              "recall": 0.1265,
+              "f1": 0.2243
+            },
+            {
+              "conf": 0.9,
+              "precision": 1.0,
+              "recall": 0.0198,
+              "f1": 0.0388
+            }
+          ]
+        }
+      }
+    },
+    {
+      "weights": "yolo26s_960.engine",
+      "imgsz": 960,
+      "map50_95": 0.4521,
+      "map50": 0.6539,
+      "precision_best_f1": 0.6864,
+      "recall_best_f1": 0.6051,
+      "precision_at_conf_0.7": 0.8951,
+      "recall_at_conf_0.7": 0.3716,
+      "speed_ms_per_image": {
+        "preprocess": 5.2,
+        "inference": 25.23,
+        "loss": 0.05,
+        "postprocess": 5.68
+      },
+      "wall_s": 252.6,
+      "classes": {
+        "person": {
+          "ap50_95": 0.5923,
+          "ap50": 0.8371,
+          "best_f1": {
+            "conf": 0.355,
+            "precision": 0.8212,
+            "recall": 0.747,
+            "f1": 0.7823
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.5514,
+              "recall": 0.8684,
+              "f1": 0.6745
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6985,
+              "recall": 0.8188,
+              "f1": 0.7539
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7875,
+              "recall": 0.7701,
+              "f1": 0.7787
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8494,
+              "recall": 0.7221,
+              "f1": 0.7806
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.8944,
+              "recall": 0.6646,
+              "f1": 0.7625
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.9338,
+              "recall": 0.5855,
+              "f1": 0.7197
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.959,
+              "recall": 0.4908,
+              "f1": 0.6493
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.9818,
+              "recall": 0.3504,
+              "f1": 0.5165
+            },
+            {
+              "conf": 0.9,
+              "precision": 0.9916,
+              "recall": 0.0876,
+              "f1": 0.161
+            }
+          ]
+        },
+        "car": {
+          "ap50_95": 0.5063,
+          "ap50": 0.7345,
+          "best_f1": {
+            "conf": 0.317,
+            "precision": 0.7653,
+            "recall": 0.6512,
+            "f1": 0.7036
+          },
+          "sweep": [
+            {
+              "conf": 0.1,
+              "precision": 0.486,
+              "recall": 0.7894,
+              "f1": 0.6016
+            },
+            {
+              "conf": 0.2,
+              "precision": 0.6448,
+              "recall": 0.7205,
+              "f1": 0.6806
+            },
+            {
+              "conf": 0.3,
+              "precision": 0.7493,
+              "recall": 0.6564,
+              "f1": 0.6998
+            },
+            {
+              "conf": 0.4,
+              "precision": 0.8163,
+              "recall": 0.5876,
+              "f1": 0.6833
+            },
+            {
+              "conf": 0.5,
+              "precision": 0.8638,
+              "recall": 0.5289,
+              "f1": 0.6561
+            },
+            {
+              "conf": 0.6,
+              "precision": 0.9097,
+              "recall": 0.4518,
+              "f1": 0.6038
+            },
+            {
+              "conf": 0.7,
+              "precision": 0.9496,
+              "recall": 0.3452,
+              "f1": 0.5063
+            },
+            {
+              "conf": 0.8,
+              "precision": 0.9819,
+              "recall": 0.2266,
+              "f1": 0.3683
+            },
+            {
+              "conf": 0.9,
+              "precision": 0.9913,
+              "recall": 0.0594,
+              "f1": 0.1121
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

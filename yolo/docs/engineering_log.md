@@ -423,3 +423,35 @@ precision. The default was not changed: the right value depends on how false
 alarms and misses are weighted, and on the radar check, which is not decided.
 These are per-image figures on COCO photos; a target seen over many video
 frames has more than one chance to be detected.
+
+### 13:44 to 15:59 - Input size 960 and 1280
+
+Exported n, s and m at imgsz 960 and 1280 (FP16, 11 to 19 min each, saved as
+`yolo26n_960.engine` and so on). Each was evaluated on COCO val2017 at its own
+size and timed on one 1280x720 frame with `scripts/bench_models.py`. 25W mode.
+Files: `20261124-coco-eval/coco_val_{960,1280}_25W_person_car.json`,
+`bench_{960,1280}_25W.json`.
+
+| Engine | imgsz | mAP50-95 | person AP | car AP | Per call | Max rate (model alone) |
+|--------|-------|----------|-----------|--------|----------|------------------------|
+| yolo26n | 640 | 0.403 | 0.518 | 0.370 | 15.7 ms | 63.8 fps |
+| yolo26n | 960 | 0.391 | 0.535 | 0.423 | 21.1 ms | 47.5 fps |
+| yolo26n | 1280 | 0.331 | 0.480 | 0.434 | 22.0 ms | 45.6 fps |
+| yolo26s | 640 | 0.480 | 0.596 | 0.469 | 17.1 ms | 58.4 fps |
+| yolo26s | 960 | 0.452 | 0.592 | 0.506 | 24.5 ms | 40.8 fps |
+| yolo26s | 1280 | 0.383 | 0.533 | 0.499 | 33.1 ms | 30.2 fps |
+| yolo26m | 640 | 0.527 | 0.631 | 0.521 | 18.8 ms | 53.1 fps |
+| yolo26m | 960 | 0.465 | 0.588 | 0.541 | 37.1 ms | 26.9 fps |
+| yolo26m | 1280 | 0.387 | 0.498 | 0.524 | 61.3 ms | 16.3 fps |
+
+- Speed: the model-alone rate is an upper bound; the full pipeline was 15 to
+  25 % slower at 640. yolo26m at 960 and anything at 1280 except yolo26n
+  cannot hold 30 fps. The pipeline was not run at 960 or 1280.
+- Accuracy on COCO falls as the input grows. COCO photos are about 640 pixels
+  wide, so 960 and 1280 enlarge them and objects become bigger than the sizes
+  the models were trained on. Car AP, a class with many small instances, rises
+  at 960; person AP falls.
+- This does not show that a larger input hurts on the camera. The camera frame
+  is 1280x720 or 1920x1080, where a larger input keeps real detail instead of
+  enlarging. That question needs footage from the camera with the target at
+  range; it is still open.
