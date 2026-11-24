@@ -355,3 +355,38 @@ Findings:
 
 Not tested: `MAXN_SUPER` mode, yolo26l/x, imgsz above 640, runs longer than
 70 s (thermal steady state), scenes with many boxes.
+
+### 10:10 to 12:11 - Offline accuracy on COCO val2017
+
+The scene in front of the camera is a static desk with no detectable objects,
+and was almost dark during the 09:55 limit runs (sample frames are mostly
+sensor noise). Accuracy therefore has to come from recorded data.
+
+Setup: COCO val2017 (5000 images) under `datasets/coco` (git-ignored), new
+`scripts/eval_coco.py`. Error on first run: `ImportError:
+numpy.core.multiarray failed to import` from the system matplotlib, which is
+built for NumPy 1. Fix: `.venv/bin/pip install --ignore-installed --no-deps
+"matplotlib>=3.8" contourpy kiwisolver cycler fonttools pyparsing`.
+
+The Claude Code session dropped twice while the 800 MB archive was unzipped to
+the SD card. The Jetson did not reboot (uptime unchanged) and was at 43 C.
+Suspected cause: SD-card write stall; not confirmed.
+
+Result, FP16 engines, imgsz 640, batch 1, 25W mode
+(`20261124-coco-eval/coco_val_640_25W.json`):
+
+| Engine | mAP50-95 | mAP50 | Precision at conf 0.7 | Recall at conf 0.7 | Inference per image |
+|--------|----------|-------|-----------------------|--------------------|---------------------|
+| yolo26n | 0.403 | 0.562 | 0.926 | 0.264 | 13.0 ms |
+| yolo26s | 0.480 | 0.649 | 0.904 | 0.372 | 18.9 ms |
+| yolo26m | 0.527 | 0.702 | 0.917 | 0.430 | 23.5 ms |
+
+- mAP is within 0.01 of the figures Ultralytics publishes for these models, so
+  the FP16 engines and the evaluation are behaving as expected.
+- At the stream's 0.7 threshold every model is about 90 % precise but finds
+  only 26 to 43 % of labelled objects (IoU 0.5, mean over 80 classes).
+- These are COCO classes and COCO images. They rank the models; they do not
+  predict accuracy on the project's own target, range or lighting.
+
+Not done: imgsz 960 and 1280 (each needs a new engine export), per-class
+results (for example person and car only), AP by object size.

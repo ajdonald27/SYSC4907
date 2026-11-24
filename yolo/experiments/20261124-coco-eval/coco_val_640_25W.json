@@ -1,0 +1,57 @@
+{
+  "dataset": "COCO val2017",
+  "images": 5000,
+  "results": [
+    {
+      "weights": "yolo26n.engine",
+      "imgsz": 640,
+      "map50_95": 0.4031,
+      "map50": 0.562,
+      "precision_best_f1": 0.6716,
+      "recall_best_f1": 0.5117,
+      "precision_at_conf_0.7": 0.9258,
+      "recall_at_conf_0.7": 0.2638,
+      "speed_ms_per_image": {
+        "preprocess": 3.73,
+        "inference": 12.98,
+        "loss": 0.05,
+        "postprocess": 7.03
+      },
+      "wall_s": 227.4
+    },
+    {
+      "weights": "yolo26s.engine",
+      "imgsz": 640,
+      "map50_95": 0.4799,
+      "map50": 0.649,
+      "precision_best_f1": 0.6963,
+      "recall_best_f1": 0.5939,
+      "precision_at_conf_0.7": 0.9043,
+      "recall_at_conf_0.7": 0.3716,
+      "speed_ms_per_image": {
+        "preprocess": 3.08,
+        "inference": 18.9,
+        "loss": 0.05,
+        "postprocess": 5.95
+      },
+      "wall_s": 208.5
+    },
+    {
+      "weights": "yolo26m.engine",
+      "imgsz": 640,
+      "map50_95": 0.5271,
+      "map50": 0.7015,
+      "precision_best_f1": 0.7311,
+      "recall_best_f1": 0.6416,
+      "precision_at_conf_0.7": 0.917,
+      "recall_at_conf_0.7": 0.4297,
+      "speed_ms_per_image": {
+        "preprocess": 2.82,
+        "inference": 23.51,
+        "loss": 0.05,
+        "postprocess": 5.58
+      },
+      "wall_s": 225.9
+    }
+  ]
+}

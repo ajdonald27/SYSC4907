@@ -136,6 +136,23 @@ Helper scripts (all act as RTSP viewers on the Jetson itself):
 | `scripts/run_with_viewer.sh SECONDS [args…]` | run the app and record a clip into the experiment folder |
 | `scripts/test_reconnect_shutdown.sh` | reconnect, SIGINT timing and camera-reuse test |
 | `scripts/test_sustained.sh [SECONDS]` | sustained run with a viewer and `tegrastats` log |
+| `scripts/bench_models.py IMAGE WEIGHTS...` | time models on one frame, no camera or encoder |
+| `scripts/eval_coco.py WEIGHTS...` | accuracy and speed on COCO val2017 (see below) |
+
+## Offline evaluation
+
+`scripts/eval_coco.py` needs COCO val2017 under `datasets/coco` (about 800 MB, not versioned):
+
+```bash
+mkdir -p datasets/coco/images && cd datasets/coco
+curl -LO https://github.com/ultralytics/assets/releases/download/v0.0.0/coco2017labels.zip
+curl -O http://images.cocodataset.org/zips/val2017.zip
+unzip -q coco2017labels.zip 'coco/labels/val2017/*' && mv coco/labels . && rmdir coco
+unzip -q val2017.zip -d images && rm coco2017labels.zip val2017.zip
+cd ../..
+.venv/bin/pip install --ignore-installed --no-deps "matplotlib>=3.8" contourpy kiwisolver cycler fonttools pyparsing
+.venv/bin/python scripts/eval_coco.py yolo26n.engine yolo26s.engine --out results.json
+```
 
 ## Tests
 
