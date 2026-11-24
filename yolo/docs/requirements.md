@@ -32,7 +32,7 @@ viewable in VLC on a Mac.
 Tracking, radar integration, model training, and any claim about drone detection
 accuracy. Pretrained COCO detection only shows that the pipeline works.
 
-## Performance targets — PROPOSED, not yet approved
+## Performance targets: PROPOSED, not yet approved
 
 These were written on 2026-11-23 before any detection run was measured. They have
 not been reviewed by the team or supervisor and should be treated as proposals.

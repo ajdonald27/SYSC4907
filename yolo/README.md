@@ -1,4 +1,4 @@
-# yolo — IMX477 → YOLO26 → RTSP
+# yolo: IMX477 → YOLO26 → RTSP
 
 Captures the IMX477 camera on a Jetson Orin Nano Super, runs YOLO26 object
 detection, draws the boxes, and serves the result as an RTSP stream that VLC on
@@ -145,7 +145,7 @@ python3 -m unittest discover -s tests -t . -v
 
 The suite needs no camera, model or network. It covers configuration, pipeline
 construction, encoder selection, the frame buffer, metrics, overlay drawing,
-detection conversion, the application loop with fakes, and — when the GStreamer
-bindings are present — a real capture from `videotestsrc` and an RTSP
+detection conversion, the application loop with fakes, and, when the GStreamer
+bindings are present, a real capture from `videotestsrc` and an RTSP
 serve/decode/reconnect round trip on localhost. Hardware tests are manual; see
 [docs/test_procedure.md](docs/test_procedure.md).

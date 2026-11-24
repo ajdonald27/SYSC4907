@@ -6,7 +6,7 @@ next to them; nothing here is estimated.
 
 ## 2026-11-23
 
-### 22:18 — Environment survey
+### 22:18 - Environment survey
 
 Commands: `cat /etc/nv_tegra_release`, `uname -r`, `dpkg -l | grep …`,
 `gst-inspect-1.0 <element>`, `python3 -c "import gi …"`.
@@ -29,30 +29,30 @@ them: PyTorch 2.10.0 / torchvision 0.25.0 wheels for JetPack 6 from the
 Ultralytics assets release, cuDSS as a required extra library, `yolo26n.pt` as
 the pretrained detection weight, TensorRT engines are device-specific.
 
-### 22:25 — Dependency installation
+### 22:25 - Dependency installation
 
 - An attempt to install tools into the home directory without `sudo` (a
   standalone `uv` binary and unpacked `.deb` files) was blocked by the session's
   permission policy. Not pursued further.
-- 22:34 — Andrew installed the system packages:
+- 22:34 - Andrew installed the system packages:
   `sudo apt install python3-pip python3-venv gir1.2-gst-rtsp-server-1.0 libgstrtspserver-1.0-0`.
   No existing JetPack package was changed (checked in `/var/log/dpkg.log`).
-- 22:35 — `python3 -m venv --system-site-packages .venv`, then the two PyTorch
+- 22:35 - `python3 -m venv --system-site-packages .venv`, then the two PyTorch
   wheels and `pip install ultralytics`. The install took about 35 minutes; the
   SD card was the bottleneck (60 % I/O wait in `top`).
 - Andrew installed cuDSS 0.7.1 following the Ultralytics guide.
-- 23:10 — Result: torch 2.10.0 with `cuda=True` (device "Orin"), torchvision
+- 23:10 - Result: torch 2.10.0 with `cuda=True` (device "Orin"), torchvision
   0.25.0, ultralytics 8.4.218, numpy 2.2.6 and opencv-python 5.1.0 inside the
   venv; system `gi` and `tensorrt` 10.3.0 still importable from it.
 
-### 22:32 — Unit tests
+### 22:32 - Unit tests
 
-`python3 -m unittest discover -s tests -t .` — 40 tests. One failure in my own
+`python3 -m unittest discover -s tests -t .`: 40 tests. One failure in my own
 test (it sampled a pixel that the status line covers); fixed the test. After the
 RTSP packages were installed the RTSP round-trip test stopped being skipped and
 passed. 40/40 pass with both the system Python and the venv.
 
-### 22:35 — First camera run, raw mode
+### 22:35 - First camera run, raw mode
 
 `python3 -m yolo_stream --raw --duration 25 --label camera-raw`, with
 `scripts/record_stream.sh` as viewer.
@@ -63,7 +63,7 @@ Folder: `20261123-223513_camera-raw_raw`.
   pip install, so the number is not representative. Root causes were found
   later (23:17). Raw mode was re-measured at the end of the session.
 
-### 22:36 — Error: Argus stops creating capture sessions
+### 22:36 - Error: Argus stops creating capture sessions
 
 A throwaway timing script of mine raised an exception and exited without
 setting the capture pipeline to `NULL`. Afterwards:
@@ -82,7 +82,7 @@ Lessons applied: the application always sets the capture pipeline to `NULL` in a
 error path was confirmed to report this failure ("capture pipeline reached end
 of stream") instead of hanging.
 
-### 23:11 — Error: camera fails when the model is loaded first
+### 23:11 - Error: camera fails when the model is loaded first
 
 `.venv/bin/python -m yolo_stream --duration 40 --label detect-first`
 Folder: `20261123-231133_detect-first_detect` (kept as the failure record).
@@ -108,7 +108,7 @@ Also fixed here: Ultralytics 8.4.218 warns that `half` is deprecated in favour
 of `quantize`; the detector now passes `quantize=16` only when `model.half` is
 true.
 
-### 23:13 — First successful detection run
+### 23:13 - First successful detection run
 
 Folder: `20261123-231308_detect-first_detect`.
 
@@ -122,14 +122,14 @@ Folder: `20261123-231308_detect-first_detect`.
   bag (`samples/frame_004_t0032.1s.jpg`). This shows the overlay path works; it
   says nothing about detection quality.
 
-### 23:14–23:19 — Finding the frame-rate dips
+### 23:14–23:19 - Finding the frame-rate dips
 
 Added timing for the wait on the frame buffer, the capture-to-push age, and
 the interval between processed frames.
 
 | Observation | Evidence | Fix |
 |-------------|----------|-----|
-| The loop never waits for the camera (max 0.6 ms) and inference never exceeds the frame period by much (max 69 ms) | `20261123-231445_detect-timing_detect/metrics.json` | — |
+| The loop never waits for the camera (max 0.6 ms) and inference never exceeds the frame period by much (max 69 ms) | `20261123-231445_detect-timing_detect/metrics.json` | - |
 | Summary frame rate was diluted by camera teardown time (elapsed was read after shutdown) | 369 frames at 25.15 s, but only 408 at "30.15 s" | Stop the metrics clock when the loop ends |
 | Dips line up with sample-image saves at 2, 12, 22 s | 13.33 fps in the 10–15 s interval | Write samples on a background thread |
 | One 1625 ms gap between frames at the first statistics write | ad-hoc 20 s run printing `loop_interval` values over 90 ms: `[(75, 1625)]` | Write CSV rows and the log file on background threads too |
@@ -138,7 +138,7 @@ Retest (ad-hoc 30 s run): no interval over 90 ms, `loop_interval` max 76.2 ms,
 15.0 fps. Conclusion: any file write from the processing thread can stall for
 0.5–1.6 s on this SD card, so the loop now does no file I/O.
 
-### 23:21 — Reconnect and shutdown test
+### 23:21 - Reconnect and shutdown test
 
 `scripts/test_reconnect_shutdown.sh`
 Folder: `20261123-232114_reconnect-shutdown_detect` (`reconnect_shutdown.txt`).
@@ -151,7 +151,7 @@ Folder: `20261123-232114_reconnect-shutdown_detect` (`reconnect_shutdown.txt`).
   inside a pipe subshell. That was a script bug, fixed; the first folder was
   discarded and the test rerun.
 
-### 23:22 — Five-minute sustained run
+### 23:22 - Five-minute sustained run
 
 `scripts/test_sustained.sh 300`
 Folder: `20261123-232211_sustained_detect`. Git commit `d890101`, no
@@ -174,7 +174,7 @@ uncommitted changes.
 Detections during this run (3490 boxes on 2731 frames) are again false
 positives on a static scene with no COCO objects in it.
 
-### 23:28 — TensorRT export
+### 23:28 - TensorRT export
 
 `.venv/bin/yolo export model=yolo26n.pt format=engine quantize=16 imgsz=640 device=0`
 
@@ -189,7 +189,7 @@ positives on a static scene with no COCO objects in it.
 - Second attempt succeeded: engine built in 564 s (682 s including ONNX
   export), `yolo26n.engine`, 8.0 MB.
 
-### 23:41 — TensorRT FP16 run (two minutes)
+### 23:41 - TensorRT FP16 run (two minutes)
 
 `scripts/test_sustained.sh 120 --weights yolo26n.engine`
 Folder: `20261123-234154_trt-fp16_detect` (renamed from `…_sustained_detect`
@@ -205,7 +205,7 @@ so it is not confused with the five-minute run).
 Both figures include Python pre- and post-processing. No accuracy comparison
 between the two was made.
 
-### 23:44 — Raw mode re-measured
+### 23:44 - Raw mode re-measured
 
 A rerun of raw mode again showed 13.4 fps with 26.7 fps "captured". Cause: in
 raw mode there is no model load, so the metrics clock started about 3 s before
@@ -229,7 +229,7 @@ processed in 30.0 s (30.0 / 15.0 fps), exit code 0.
 
 ## 2026-11-24
 
-### 00:03 — VLC on the Mac
+### 00:03 - VLC on the Mac
 
 - Direct to `192.168.102.51` and to the Tailscale address `100.95.175.87`:
   `live555 demux error: Failed to connect`. On the Jetson, `ss -ltn` showed the
@@ -242,19 +242,19 @@ processed in 30.0 s (30.0 / 15.0 fps), exit code 0.
   `VLC --rtsp-tcp rtsp://localhost:8554/detections`. Andrew saw the annotated
   stream; the log shows an 83 s viewer session (00:15:26–00:16:49) in
   `20261124-001443_mac-vlc_detect`.
-- 00:13 — the session running the stream restarted and the application received
+- 00:13 - the session running the stream restarted and the application received
   SIGTERM; it exited with code 0 (`20261124-000844_mac-vlc_detect/run.log`).
 - A 20-minute run before that (`20261123-234719_mac-vlc_detect`) processed
   17998 frames in 1200 s (15.0 fps), exit code 0, with no viewer for most of it.
 
-### 00:17 — Picture upside down
+### 00:17 - Picture upside down
 
 Seen in VLC. Changed the default `camera.flip_method` from 2 to 0 (code,
 `config/default.yaml`, test, README). The value 2 came from the `nv3dsink`
 preview command. Retest: `20261124-001754_mac-vlc_detect` samples are upright
 (printed text reads normally).
 
-### 00:19 — One more frame-rate dip
+### 00:19 - One more frame-rate dip
 
 In `20261124-001754_mac-vlc_detect/metrics.csv` the 5–10 s interval shows
 12.09 fps. In this run the console output was redirected to a file on the SD
@@ -271,7 +271,7 @@ a rerun with redirected output.
    (known object).
 3. Rerun with output redirected to a file to confirm the console-logging fix.
 
-### 00:21 — Confidence threshold raised to 0.7
+### 00:21 - Confidence threshold raised to 0.7
 
 Requested by Andrew after viewing the stream: at 0.25 most boxes were weak
 guesses (`dining table 0.26`, `keyboard 0.32`). Default `model.conf` changed
@@ -285,7 +285,7 @@ dipped to 12.09. That is consistent with the fix but is one short observation.
 All earlier experiment folders were recorded with `conf: 0.25` and
 `flip_method: 2`; each folder's `config.yaml` has the values it ran with.
 
-### 00:23 — 30 fps with the TensorRT engine (two minutes)
+### 00:23 - 30 fps with the TensorRT engine (two minutes)
 
 Question from Andrew: is the frame rate limited by the hardware? The 15 fps
 figure is the configured `stream.fps`. Test:
