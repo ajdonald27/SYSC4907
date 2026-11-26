@@ -1,0 +1,13 @@
+{
+  "fft_size": 128,
+  "chirps_per_frame": 256,
+  "total_shift": 3,
+  "largest_unscaled_output": 43827,
+  "headroom_dB": 15.5,
+  "source": "20250503_S_system_walk_pynq_nam_180851.npz",
+  "frames_used": [
+    0,
+    150,
+    300
+  ]
+}

@@ -1,0 +1,5 @@
+recordings/
+*.npz
+*.png
+*.summary.json
+__pycache__/
