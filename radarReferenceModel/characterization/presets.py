@@ -52,6 +52,13 @@ PRESETS = {
         lp_cutoff_Hz=500_000,
         hp_cutoff_Hz=20_000,     # keep close targets (fan at 1.5 m) above the HPF
     ),
+    # S - the one system configuration (frozen 2026-11-19): 0.25 m bins, 16 m, 8.3 m/s, 20 fps.
+    "S_system": dict(
+        start_frequency_Hz=60.0e9, end_frequency_Hz=60.6e9, sample_rate_Hz=1_000_000,
+        num_samples=128, chirp_repetition_time_s=150e-6, num_chirps=256,
+        frame_repetition_time_s=0.05, tx_power_level=31, if_gain_dB=33,
+        lp_cutoff_Hz=500_000, hp_cutoff_Hz=20_000,
+    ),
 }
 
 
@@ -127,3 +134,7 @@ if __name__ == "__main__":
             print(f"  {k:24s} {v:10.3f}")
         for msg in problems:
             print("  WARNING:", msg)
+
+# gain tests (Nov 25): same frame as S_system, more IF gain. Did not help a small drone.
+PRESETS["S_g42"] = dict(PRESETS["S_system"], if_gain_dB=42)
+PRESETS["S_g50"] = dict(PRESETS["S_system"], if_gain_dB=50)

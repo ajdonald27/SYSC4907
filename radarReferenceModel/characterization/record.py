@@ -100,7 +100,7 @@ def main():
     dist = "na" if args.distance is None else f"{args.distance:g}"
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(args.outdir, f"{stamp[:8]}_{args.preset}_{args.label}_{dist}m_{stamp[9:]}.npz")
-    np.savez_compressed(path, frames=np.stack(frames), t=np.array(stamps), meta=json.dumps(meta))
+    np.savez(path, frames=np.stack(frames), t=np.array(stamps), meta=json.dumps(meta))
     print("Saved", path)
 
     if args.show and "empty" not in args.label.lower():
